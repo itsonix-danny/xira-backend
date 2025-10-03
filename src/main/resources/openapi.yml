@@ -1,0 +1,114 @@
+openapi: 3.0.3
+info:
+  title: Xira
+  version: 1.0.0
+  description: 'Xira - Issue tracking and project management'
+
+paths:
+  /auth/register:
+    post:
+      tags: [ Auth ]
+      operationId: register
+      summary: Register a new user account
+      description: 'Creates a new user account with the provided credentials. Does not automatically log in the user.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User account created successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /auth/login:
+    post:
+      tags: [ Auth ]
+      operationId: login
+      summary: Login with username and password
+      description: 'Authenticates the user and returns a signed JWT. Use the token in the `Authorization: Bearer <token>` header when calling protected endpoints.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+components:
+  responses:
+    Problem:
+      description: Default response in case of an error.
+      content:
+        application/problem+json:
+          schema:
+            $ref: 'https://opensource.zalando.com/restful-api-guidelines/models/problem-1.0.1.yaml#/Problem'
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [ email, password, firstName, lastName ]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address (must be unique)
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: User password (minimum 8 characters)
+        firstName:
+          type: string
+          minLength: 1
+          description: User first name
+        lastName:
+          type: string
+          minLength: 1
+          description: User last name
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [ email, password ]
+      properties:
+        email:
+          type: string
+          description: email address
+        password:
+          type: string
+          format: password
+
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [ access_token ]
+      properties:
+        access_token:
+          type: string
+          description: 'Signed JWT to send as `Authorization: Bearer <token>`'

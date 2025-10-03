@@ -1,0 +1,10 @@
+#Organize Import Order
+#Mon Dec 06 17:00:04 CEST 2022
+0=jakarta
+1=javax
+2=java
+3=org
+4=com
+5=lombok
+6=
+7=\#
