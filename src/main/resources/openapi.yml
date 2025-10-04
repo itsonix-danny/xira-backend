@@ -210,6 +210,79 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
+  /projects/{key}/members:
+    post:
+      tags: [ Projects ]
+      operationId: addProjectMember
+      summary: Add a member to a project
+      description: 'Adds a new member to the project. Only accessible by project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddProjectMemberRequest'
+      responses:
+        '201':
+          description: Project member added successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/members/{email}:
+    delete:
+      tags: [ Projects ]
+      operationId: removeProjectMember
+      summary: Remove a member from a project
+      description: 'Removes an existing member from the project. Only accessible by project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: email
+          in: path
+          required: true
+          description: Email address of the project member
+          schema:
+            type: string
+            format: email
+      responses:
+        '204':
+          description: Project member removed successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
 components:
   responses:
     Problem:
@@ -287,6 +360,23 @@ components:
         access_token:
           type: string
           description: 'Signed JWT to send as `Authorization: Bearer <token>`'
+
+    AddProjectMemberRequest:
+      type: object
+      additionalProperties: false
+      required: [ email, role ]
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address of the user to add as project member
+        role:
+          $ref: '#/components/schemas/ProjectMemberRole'
+
+    ProjectMemberRole:
+      type: string
+      description: Role of a user within a project
+      enum: [ ADMIN, DEVELOPER ]
 
     CreateProjectRequest:
       type: object

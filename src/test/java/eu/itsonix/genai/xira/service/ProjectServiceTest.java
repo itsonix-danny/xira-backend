@@ -14,9 +14,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import eu.itsonix.genai.xira.jpa.entity.Project;
 import eu.itsonix.genai.xira.jpa.entity.ProjectMember;
+import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
+import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
+import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
+import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
@@ -36,6 +40,9 @@ class ProjectServiceTest {
 
     @Mock
     private AuthService authService;
+
+    @Mock
+    private XiraUserRepository xiraUserRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -117,5 +124,138 @@ class ProjectServiceTest {
         assertThatThrownBy(() -> projectService.updateProject("NONEXISTENT", request))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Project not found");
+    }
+
+    @Test
+    void givenValidRequest_whenAddProjectMember_thenSavesMember() {
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .email("member@example.com")
+                .role(ProjectMemberRole.DEVELOPER);
+
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
+
+        final XiraUser user = XiraUser.builder()
+                .id("user-id")
+                .email("member@example.com")
+                .build();
+        when(xiraUserRepository.findByEmailIgnoreCase("member@example.com")).thenReturn(Optional.of(user));
+        when(projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase("XIRA",
+                "member@example.com")).thenReturn(false);
+
+        projectService.addProjectMember("XIRA", request);
+
+        verify(projectMemberRepository).save(any(ProjectMember.class));
+    }
+
+    @Test
+    void givenExistingMember_whenAddProjectMember_thenThrowsIllegalState() {
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .email("member@example.com")
+                .role(ProjectMemberRole.ADMIN);
+
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
+        when(xiraUserRepository.findByEmailIgnoreCase("member@example.com"))
+                .thenReturn(Optional.of(XiraUser.builder().id("user-id").email("member@example.com").build()));
+        when(projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase("XIRA",
+                "member@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> projectService.addProjectMember("XIRA", request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("User is already a project member");
+    }
+
+    @Test
+    void givenNonExistingProject_whenAddProjectMember_thenThrowsEntityNotFound() {
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .email("member@example.com")
+                .role(ProjectMemberRole.DEVELOPER);
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.addProjectMember("XIRA", request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project not found");
+    }
+
+    @Test
+    void givenNonExistingUser_whenAddProjectMember_thenThrowsEntityNotFound() {
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .email("missing@example.com")
+                .role(ProjectMemberRole.DEVELOPER);
+
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
+        when(xiraUserRepository.findByEmailIgnoreCase("missing@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.addProjectMember("XIRA", request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("User not found");
+    }
+
+    @Test
+    void givenValidRequest_whenRemoveProjectMember_thenDeletesMember() {
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
+
+        final ProjectMember member = ProjectMember.builder()
+                .projectId("project-id")
+                .userId("user-id")
+                .role(ProjectRole.DEVELOPER)
+                .build();
+
+        when(projectMemberRepository.findByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase("XIRA", "member@example.com"))
+                .thenReturn(Optional.of(member));
+
+        projectService.removeProjectMember("XIRA", "member@example.com");
+
+        verify(projectMemberRepository).delete(member);
+    }
+
+    @Test
+    void givenNonExistingProject_whenRemoveProjectMember_thenThrowsEntityNotFound() {
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.removeProjectMember("XIRA", "member@example.com"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project not found");
+    }
+
+    @Test
+    void givenNonExistingMember_whenRemoveProjectMember_thenThrowsEntityNotFound() {
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
+        when(projectMemberRepository.findByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase("XIRA",
+                "member@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.removeProjectMember("XIRA", "member@example.com"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project member not found");
     }
 }
