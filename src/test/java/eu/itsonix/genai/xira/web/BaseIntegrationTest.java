@@ -8,9 +8,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
-import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
-import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
+import eu.itsonix.genai.xira.jpa.repository.*;
 import io.restassured.RestAssured;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -34,6 +32,15 @@ abstract class BaseIntegrationTest {
     private int port;
 
     @Autowired
+    private BoardColumnWorkflowStatusRepository boardColumnWorkflowStatusRepository;
+
+    @Autowired
+    private BoardColumnRepository boardColumnRepository;
+
+    @Autowired
+    private BoardRepository boardRepository;
+
+    @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
     @Autowired
@@ -47,6 +54,9 @@ abstract class BaseIntegrationTest {
         RestAssured.baseURI = "http://localhost";
         RestAssured.port = port;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        boardColumnWorkflowStatusRepository.deleteAll();
+        boardColumnRepository.deleteAll();
+        boardRepository.deleteAll();
         projectMemberRepository.deleteAll();
         projectRepository.deleteAll();
         xiraUserRepository.deleteAll();

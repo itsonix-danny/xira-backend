@@ -42,12 +42,8 @@ public class Project {
     @Column(name = "lead_user_id", insertable = false, updatable = false)
     private String ownerId;
 
-    @ManyToOne
-    @JoinColumn(name = "workflow_id")
+    @OneToOne(mappedBy = "project", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Workflow workflow;
-
-    @Column(name = "workflow_id", insertable = false, updatable = false)
-    private String workflowId;
 
     @CreatedDate
     @Column(nullable = false)

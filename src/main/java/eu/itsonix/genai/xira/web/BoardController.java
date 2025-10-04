@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import eu.itsonix.genai.xira.service.BoardService;
 import eu.itsonix.genai.xira.web.api.BoardsApi;
 import eu.itsonix.genai.xira.web.model.AddBoardRequest;
+import eu.itsonix.genai.xira.web.model.UpdateBoardRequest;
 
 @RestController
 @RequiredArgsConstructor
@@ -19,9 +20,16 @@ public class BoardController implements BoardsApi {
     private final BoardService boardService;
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@authService.isProjectAdmin(#key)")
     public ResponseEntity<Void> createBoard(final String key, final AddBoardRequest addBoardRequest) {
-        final String boardId = boardService.addBoard(key, addBoardRequest);
-        return ResponseEntity.created(URI.create(String.format("/projects/%s/boards/%s", key, boardId))).build();
+        final String boardNumber = boardService.addBoard(key, addBoardRequest);
+        return ResponseEntity.created(URI.create(String.format("/projects/%s/boards/%s", key, boardNumber))).build();
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectAdmin(#key)")
+    public ResponseEntity<Void> updateBoard(final String key, final Integer boardNumber, final UpdateBoardRequest updateBoardRequest) {
+        boardService.updateBoard(key, boardNumber, updateBoardRequest);
+        return ResponseEntity.ok().build();
     }
 }

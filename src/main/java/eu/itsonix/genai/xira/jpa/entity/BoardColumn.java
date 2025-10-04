@@ -3,7 +3,6 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -20,7 +19,8 @@ import lombok.*;
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
-public class Sprint {
+public class BoardColumn {
+
     @Id
     @GeneratedValue
     @UuidGenerator(style = UuidGenerator.Style.AUTO)
@@ -28,24 +28,17 @@ public class Sprint {
     private String id;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "project_id", nullable = false)
-    private Project project;
+    @JoinColumn(name = "board_id", nullable = false)
+    private Board board;
 
-    @Column(name = "project_id", insertable = false, updatable = false)
-    private String projectId;
+    @Column(name = "board_id", insertable = false, updatable = false)
+    private String boardId;
 
     @Column(nullable = false)
     private String name;
 
-    @Column
-    private LocalDate startDate;
-
-    @Column
-    private LocalDate endDate;
-
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private SprintState state;
+    private Integer columnOrder;
 
     @CreatedDate
     @Column(nullable = false)

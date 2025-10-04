@@ -9,5 +9,7 @@ import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, ProjectMemberId> {
-    boolean existsByProject_KeyAndXiraUser_EmailAndRole(String projectKey, String email, ProjectRole role);
+
+    boolean existsByProject_KeyAndXiraUser_EmailAndRole(final String projectKey, final String email,
+            final ProjectRole role);
 }

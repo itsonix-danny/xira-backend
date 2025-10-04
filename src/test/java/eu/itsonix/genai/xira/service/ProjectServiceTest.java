@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.access.AccessDeniedException;
 
 import eu.itsonix.genai.xira.jpa.entity.Project;
 import eu.itsonix.genai.xira.jpa.entity.ProjectMember;
@@ -31,6 +30,9 @@ class ProjectServiceTest {
 
     @Mock
     private ProjectMemberRepository projectMemberRepository;
+
+    @Mock
+    private WorkflowService workflowService;
 
     @Mock
     private AuthService authService;
@@ -68,6 +70,7 @@ class ProjectServiceTest {
         projectService.createProject(request);
 
         verify(projectRepository).save(any(Project.class));
+        verify(workflowService).createDefaultWorkflow(any(Project.class));
         verify(projectMemberRepository).save(any(ProjectMember.class));
     }
 
@@ -98,7 +101,6 @@ class ProjectServiceTest {
                 .build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(existingProject));
-        when(authService.isProjectAdmin("XIRA")).thenReturn(true);
 
         projectService.updateProject("XIRA", request);
 
@@ -115,24 +117,5 @@ class ProjectServiceTest {
         assertThatThrownBy(() -> projectService.updateProject("NONEXISTENT", request))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Project not found");
-    }
-
-    @Test
-    void givenNonAdmin_thenThrowsAccessDenied() {
-        final UpdateProjectRequest request = new UpdateProjectRequest()
-                .name("Updated Name");
-
-        final Project existingProject = Project.builder()
-                .id("project-id")
-                .key("XIRA")
-                .name("Old Name")
-                .build();
-
-        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(existingProject));
-        when(authService.isProjectAdmin("XIRA")).thenReturn(false);
-
-        assertThatThrownBy(() -> projectService.updateProject("XIRA", request))
-                .isInstanceOf(AccessDeniedException.class)
-                .hasMessage("User is not a project admin");
     }
 }
