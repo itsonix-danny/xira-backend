@@ -27,9 +27,10 @@ public class ProjectController implements ProjectsApi {
     }
 
     @Override
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@authService.isProjectAdmin(#key)")
     public ResponseEntity<Void> updateProject(final String key, final UpdateProjectRequest updateProjectRequest) {
         projectService.updateProject(key, updateProjectRequest);
         return ResponseEntity.ok().build();
     }
+
 }

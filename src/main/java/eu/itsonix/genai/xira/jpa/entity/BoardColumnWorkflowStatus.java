@@ -17,28 +17,27 @@ import lombok.*;
 @ToString
 @Builder
 @Entity
-@IdClass(ProjectMemberId.class)
+@IdClass(BoardColumnWorkflowStatusId.class)
 @EntityListeners(AuditingEntityListener.class)
-public class ProjectMember {
+public class BoardColumnWorkflowStatus {
     @Id
-    @Column(name = "project_id", nullable = false)
-    private String projectId;
+    @Column(name = "board_column_id", nullable = false)
+    private String boardColumnId;
 
     @Id
-    @Column(name = "user_id", nullable = false)
-    private String userId;
+    @Column(name = "workflow_status_id", nullable = false)
+    private String workflowStatusId;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "project_id", insertable = false, updatable = false)
-    private Project project;
+    @JoinColumn(name = "board_column_id", insertable = false, updatable = false)
+    private BoardColumn boardColumn;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
-    private XiraUser xiraUser;
+    @JoinColumn(name = "workflow_status_id", insertable = false, updatable = false)
+    private WorkflowStatus workflowStatus;
 
     @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    private ProjectRole role;
+    private Boolean isDefault;
 
     @CreatedDate
     @Column(nullable = false)

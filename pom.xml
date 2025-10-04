@@ -189,6 +189,7 @@
                                 <documentationProvider>none</documentationProvider>
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <useJakartaEe>true</useJakartaEe>
+                                <useTags>true</useTags>
                             </configOptions>
                         </configuration>
                     </execution>

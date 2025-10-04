@@ -1,8 +1,11 @@
 package eu.itsonix.genai.xira.web;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 
+import eu.itsonix.genai.xira.jpa.repository.WorkflowRepository;
+import eu.itsonix.genai.xira.jpa.repository.WorkflowStatusRepository;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.LoginRequest;
 import eu.itsonix.genai.xira.web.model.RegisterRequest;
@@ -10,12 +13,19 @@ import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 import io.restassured.http.ContentType;
 
 import static io.restassured.RestAssured.given;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 
 class ProjectControllerIntegrationTest extends BaseIntegrationTest {
 
     private static final String EMAIL = "owner@example.com";
     private static final String PASSWORD = "password";
+
+    @Autowired
+    private WorkflowRepository workflowRepository;
+
+    @Autowired
+    private WorkflowStatusRepository workflowStatusRepository;
 
     @Test
     void givenAuthenticatedUser_whenCreateProject_thenReturnsCreatedProject() {
@@ -24,12 +34,23 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new CreateProjectRequest().key("XIRA").name("Xira Project").description("Test project description"))
+                .body(new CreateProjectRequest().key("XIRA")
+                        .name("Xira Project")
+                        .description("Test project description"))
                 .when()
                 .post("/projects")
                 .then()
                 .statusCode(201)
                 .header(HttpHeaders.LOCATION, equalTo("/projects/XIRA"));
+
+        final var workflows = workflowRepository.findAll();
+        assertThat(workflows).hasSize(1);
+
+        final var workflowStatuses = workflowStatusRepository.findAll();
+        assertThat(workflowStatuses).hasSize(3);
+        assertThat(workflowStatuses.getFirst().getName()).isEqualTo("To Do");
+        assertThat(workflowStatuses.get(1).getName()).isEqualTo("In Progress");
+        assertThat(workflowStatuses.get(2).getName()).isEqualTo("Done");
     }
 
     @Test
@@ -153,7 +174,10 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         given().contentType(ContentType.JSON)
-                .body(new RegisterRequest().email("member@example.com").password(PASSWORD).firstName("Member").lastName("User"))
+                .body(new RegisterRequest().email("member@example.com")
+                        .password(PASSWORD)
+                        .firstName("Member")
+                        .lastName("User"))
                 .when()
                 .post("/auth/register")
                 .then()
@@ -179,7 +203,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenNonExistentProject_whenUpdateProject_thenReturnsNotFound() {
+    void givenNonExistentProject_whenUpdateProject_thenReturnsForbidden() {
         registerUser();
         final String token = login();
 
@@ -189,7 +213,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .patch("/projects/NONEXISTENT")
                 .then()
-                .statusCode(404);
+                .statusCode(403);
     }
 
     @Test
@@ -290,6 +314,50 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .patch("/projects/XIRA")
                 .then()
                 .statusCode(200);
+    }
+
+    @Test
+    void givenEmptyName_whenUpdateProject_thenReturnsBadRequest() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().name(""))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void givenEmptyDescription_whenUpdateProject_thenReturnsBadRequest() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().description(""))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(400);
     }
 
     @Test

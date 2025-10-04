@@ -36,22 +36,29 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 **Core Entities:**
 
 - **XiraUser**: User account with email, name, and password hash
-- **Project**: Project with unique key, name, lead user (owner), and optional workflow
+- **Project**: Project with unique key, name, and lead user (owner). Each project has exactly one workflow
+  automatically created with three default statuses (To Do, In Progress, Done)
+- **Board**: Project board with name, board number (unique per project), and type (SCRUM or KANBAN). Each board
+  automatically gets three default columns (To Do, In Progress, Done) matching the project's workflow statuses
+- **BoardColumn**: Column in a board with name and order
 - **Issue**: Task/bug/story with project reference, sequence number, unique key, type, status, priority, reporter,
   optional assignee, title, and description
 - **Sprint**: Time-boxed iteration with project reference, name, optional start/end dates, and state
 - **IssueComment**: Comment on an issue with author reference and content
-- **Workflow**: Named workflow configuration for a project
+- **Workflow**: Workflow configuration belonging to a project. Created automatically when project is created with
+  three statuses: "To Do" (TODO), "In Progress" (IN_PROGRESS), and "Done" (DONE)
 - **WorkflowStatus**: Status within a workflow with name, category, and order
-- **WorkflowTransition**: Allowed transition between workflow statuses (optional from-status, required to-status)
 
 **Join Tables:**
 
 - **ProjectMember**: Links users to projects with roles (composite key: projectId + userId)
 - **SprintIssue**: Links issues to sprints with timestamp (composite key: sprintId + issueId)
+- **BoardColumnWorkflowStatus**: Links board columns to workflow statuses with isDefault flag (composite key:
+  boardColumnId + workflowStatusId)
 
 **Enums:**
 
+- **BoardType**: Type of board (SCRUM or KANBAN)
 - **IssueType**: Type of issue (e.g., Task, Bug, Story)
 - **IssuePriority**: Priority level for issues
 - **ProjectRole**: Role of a user in a project
@@ -61,17 +68,18 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 **Key Relationships:**
 
 - **Project → XiraUser** (ManyToOne): Project owner/lead
-- **Project → Workflow** (ManyToOne, optional): Project's workflow configuration
+- **Workflow → Project** (ManyToOne): Workflow belongs to project (one workflow per project, created automatically)
+- **Board → Project** (ManyToOne): Board belongs to project
+- **BoardColumn → Board** (ManyToOne): Column belongs to board
+- **BoardColumnWorkflowStatus → BoardColumn** (ManyToOne): Links column to workflow status
+- **BoardColumnWorkflowStatus → WorkflowStatus** (ManyToOne): Links column to workflow status
 - **Issue → Project** (ManyToOne): Issue belongs to project
 - **Issue → WorkflowStatus** (ManyToOne): Current status of issue
 - **Issue → XiraUser** (ManyToOne): Reporter (required) and Assignee (optional)
 - **Sprint → Project** (ManyToOne): Sprint belongs to project
 - **IssueComment → Issue** (ManyToOne): Comment on issue
 - **IssueComment → XiraUser** (ManyToOne): Comment author
-- **Workflow → Project** (ManyToOne): Workflow belongs to project
 - **WorkflowStatus → Workflow** (ManyToOne): Status within workflow
-- **WorkflowTransition → Workflow** (ManyToOne): Transition belongs to workflow
-- **WorkflowTransition → WorkflowStatus** (ManyToOne): From-status (optional) and To-status (required)
 - **ProjectMember → Project + XiraUser** (ManyToOne, composite): User membership in project with role
 - **SprintIssue → Sprint + Issue** (ManyToOne, composite): Issue assigned to sprint with timestamp
 
@@ -88,6 +96,7 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 - **Method References**: Prefer `this::methodName` over lambdas
 - **Immutability**: Use `final` for all variables where possible
 - **Builder Pattern**: Consistently use builder patterns for entities and dtos
+- **Avoid var**: Avoid var outside of tests
 
 ### Key Development Patterns
 

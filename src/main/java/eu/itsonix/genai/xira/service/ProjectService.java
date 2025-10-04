@@ -2,7 +2,6 @@ package eu.itsonix.genai.xira.service;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +22,7 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final WorkflowService workflowService;
     private final AuthService authService;
 
     @Transactional
@@ -33,12 +33,16 @@ public class ProjectService {
 
         final XiraUser owner = authService.getAuthenticatedUser();
 
-        final Project project = projectRepository.save(Project.builder()
+        final Project project = Project.builder()
                 .key(createProjectRequest.getKey())
                 .name(createProjectRequest.getName())
                 .description(createProjectRequest.getDescription())
                 .owner(owner)
-                .build());
+                .build();
+
+        project.setWorkflow(workflowService.createDefaultWorkflow(project));
+
+        projectRepository.save(project);
 
         projectMemberRepository.save(ProjectMember.builder()
                 .projectId(project.getId())
@@ -53,10 +57,6 @@ public class ProjectService {
     public void updateProject(final String projectKey, final UpdateProjectRequest updateProjectRequest) {
         final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
-
-        if (!authService.isProjectAdmin(projectKey)) {
-            throw new AccessDeniedException("User is not a project admin");
-        }
 
         if (updateProjectRequest.getName() != null) {
             project.setName(updateProjectRequest.getName());
