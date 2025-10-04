@@ -53,6 +53,38 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
+  /projects:
+    post:
+      tags: [ Projects ]
+      operationId: createProject
+      summary: Create a new project
+      description: 'Creates a new project owned by the authenticated user.'
+      security:
+        - BearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project created successfully
+          headers:
+            Location:
+              description: URL of the created project resource
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
 components:
   responses:
     Problem:
@@ -60,7 +92,7 @@ components:
       content:
         application/problem+json:
           schema:
-            $ref: 'https://opensource.zalando.com/restful-api-guidelines/models/problem-1.0.1.yaml#/Problem'
+            $ref: '#/components/schemas/Problem'
 
   securitySchemes:
     BearerAuth:
@@ -69,6 +101,24 @@ components:
       bearerFormat: JWT
 
   schemas:
+    Problem:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+          format: int32
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+
     RegisterRequest:
       type: object
       additionalProperties: false
@@ -112,3 +162,36 @@ components:
         access_token:
           type: string
           description: 'Signed JWT to send as `Authorization: Bearer <token>`'
+
+    CreateProjectRequest:
+      type: object
+      additionalProperties: false
+      required: [ key, name ]
+      properties:
+        key:
+          type: string
+          description: Unique project key (e.g. XIRA)
+          minLength: 2
+          maxLength: 10
+          pattern: '[A-Z]*$'
+        name:
+          type: string
+          description: Human-readable project name
+          minLength: 1
+          maxLength: 100
+
+    ProjectResponse:
+      type: object
+      additionalProperties: false
+      required: [ key, name, ownerEmail ]
+      properties:
+        key:
+          type: string
+          description: Unique project key
+        name:
+          type: string
+          description: Project name
+        ownerEmail:
+          type: string
+          format: email
+          description: Email of the project owner
