@@ -1,10 +1,12 @@
 package eu.itsonix.genai.xira.service;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
@@ -64,5 +66,12 @@ public class AuthService {
                 .lastName(registerRequest.getLastName())
                 .passwordHash(passwordEncoder.encode(registerRequest.getPassword()))
                 .build());
+    }
+
+    public XiraUser getAuthenticatedUser() {
+        return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .map(Authentication::getName)
+                .flatMap(xiraUserRepository::findByEmailIgnoreCase)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
     }
 }

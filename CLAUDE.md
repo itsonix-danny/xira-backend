@@ -110,6 +110,7 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 - **Avoid redundancy**: Question similar tests - if two tests cover the same behavior, keep the most comprehensive one
 - **Focus on behavior**: Test observable outcomes, not implementation details (avoid testing method delegation or
   internal calls)
+- **Consistency**: Whenever possible, check similar tests in the project and follow the same structure and patterns
 
 **Unit Tests** use Mockito with a consistent structure:
 
@@ -124,6 +125,9 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 
 - **TestContainers**: PostgreSQL instance
 - **REST Assured**: API endpoint testing with `ContentType.JSON` (not string literals)
+- **Common base for integration tests**: All integration tests extend the BaseIntegrationTest to reuse a common setup
+  and functionality
 - **Test isolation**: Clear database content before each test for isolation
-- **Real integration tests**: When possible, test the application as a black box using the APIs (e.g., verify
+- **API usage for integration tests**: When possible, test the application as a black box using the APIs (e.g., verify
   registration by logging in with those credentials, not by checking the database)
+- **DTOs as REST input**: Send the body as the DTO object instead of a Map or JSON string
