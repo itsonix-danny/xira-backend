@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import eu.itsonix.genai.xira.service.ProjectService;
 import eu.itsonix.genai.xira.web.api.ProjectsApi;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
+import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 @RestController
 @RequiredArgsConstructor
@@ -23,5 +24,12 @@ public class ProjectController implements ProjectsApi {
     public ResponseEntity<Void> createProject(final CreateProjectRequest createProjectRequest) {
         projectService.createProject(createProjectRequest);
         return ResponseEntity.created(URI.create(String.format("/projects/%s", createProjectRequest.getKey()))).build();
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> updateProject(final String key, final UpdateProjectRequest updateProjectRequest) {
+        projectService.updateProject(key, updateProjectRequest);
+        return ResponseEntity.ok().build();
     }
 }

@@ -6,6 +6,7 @@ import org.springframework.http.HttpHeaders;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.LoginRequest;
 import eu.itsonix.genai.xira.web.model.RegisterRequest;
+import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 import io.restassured.http.ContentType;
 
 import static io.restassured.RestAssured.given;
@@ -23,7 +24,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project").description("Test project description"))
                 .when()
                 .post("/projects")
                 .then()
@@ -114,5 +115,202 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .extract()
                 .jsonPath()
                 .getString("access_token");
+    }
+
+    @Test
+    void givenAdmin_whenUpdateProject_thenReturnsSuccess() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project").description("Original description"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().name("Updated Project").description("Updated description"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void givenNonAdmin_whenUpdateProject_thenReturnsForbidden() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .body(new RegisterRequest().email("member@example.com").password(PASSWORD).firstName("Member").lastName("User"))
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(201);
+
+        final String memberToken = given().contentType(ContentType.JSON)
+                .body(new LoginRequest().email("member@example.com").password(PASSWORD))
+                .when()
+                .post("/auth/login")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getString("access_token");
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
+                .body(new UpdateProjectRequest().name("Updated Project"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenNonExistentProject_whenUpdateProject_thenReturnsNotFound() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().name("Updated Project"))
+                .when()
+                .patch("/projects/NONEXISTENT")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenTooLongName_whenUpdateProject_thenReturnsBadRequest() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().name("A".repeat(101)))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void givenTooLongDescription_whenUpdateProject_thenReturnsBadRequest() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().description("A".repeat(201)))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void givenTooLongDescription_whenCreateProject_thenReturnsBadRequest() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project").description("A".repeat(201)))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(400);
+    }
+
+    @Test
+    void givenUnauthenticated_whenCreateProject_thenReturnsUnauthorized() {
+        given().contentType(ContentType.JSON)
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenUnauthenticated_whenUpdateProject_thenReturnsUnauthorized() {
+        given().contentType(ContentType.JSON)
+                .body(new UpdateProjectRequest().name("Updated Project"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenOnlyName_whenUpdateProject_thenReturnsSuccess() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Original Name").description("Original Description"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().name("Updated Name"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void givenOnlyDescription_whenUpdateProject_thenReturnsSuccess() {
+        registerUser();
+        final String token = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new CreateProjectRequest().key("XIRA").name("Original Name").description("Original Description"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateProjectRequest().description("Updated Description"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(200);
     }
 }

@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
+import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.LoginRequest;
 import eu.itsonix.genai.xira.web.model.RegisterRequest;
@@ -33,6 +35,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtEncoder jwtEncoder;
     private final XiraUserRepository xiraUserRepository;
+    private final ProjectMemberRepository projectMemberRepository;
     private final PasswordEncoder passwordEncoder;
 
     public TokenResponse login(final LoginRequest loginRequest) {
@@ -73,5 +76,14 @@ public class AuthService {
                 .map(Authentication::getName)
                 .flatMap(xiraUserRepository::findByEmailIgnoreCase)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+    }
+
+    public boolean isProjectAdmin(final String projectKey) {
+        final String email = Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .map(Authentication::getName)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+        return projectMemberRepository.existsByProject_KeyAndXiraUser_EmailAndRole(projectKey, email,
+                ProjectRole.ADMIN);
     }
 }

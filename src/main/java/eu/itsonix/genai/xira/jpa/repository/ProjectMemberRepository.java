@@ -5,7 +5,9 @@ import org.springframework.stereotype.Repository;
 
 import eu.itsonix.genai.xira.jpa.entity.ProjectMember;
 import eu.itsonix.genai.xira.jpa.entity.ProjectMemberId;
+import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, ProjectMemberId> {
+    boolean existsByProject_KeyAndXiraUser_EmailAndRole(String projectKey, String email, ProjectRole role);
 }

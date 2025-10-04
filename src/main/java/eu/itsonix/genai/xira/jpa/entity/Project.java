@@ -32,6 +32,9 @@ public class Project {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 200)
+    private String description;
+
     @ManyToOne(optional = false)
     @JoinColumn(name = "lead_user_id", nullable = false)
     private XiraUser owner;

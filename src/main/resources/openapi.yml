@@ -85,6 +85,41 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
+  /projects/{key}:
+    patch:
+      tags: [ Projects ]
+      operationId: updateProject
+      summary: Update a project
+      description: 'Updates project name and/or description. Only accessible by project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectRequest'
+      responses:
+        '200':
+          description: Project updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
 components:
   responses:
     Problem:
@@ -179,6 +214,24 @@ components:
           description: Human-readable project name
           minLength: 1
           maxLength: 100
+        description:
+          type: string
+          description: Optional project description
+          maxLength: 200
+
+    UpdateProjectRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        name:
+          type: string
+          description: Human-readable project name
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          description: Project description
+          maxLength: 200
 
     ProjectResponse:
       type: object

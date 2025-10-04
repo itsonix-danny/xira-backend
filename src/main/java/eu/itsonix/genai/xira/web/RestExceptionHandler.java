@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -27,6 +28,11 @@ public class RestExceptionHandler {
     @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
     public ResponseEntity<Problem> handleAuthenticationException(final Exception ex) {
         return problemResponse(UNAUTHORIZED, ex);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Problem> handleAccessDenied(final AccessDeniedException ex) {
+        return problemResponse(FORBIDDEN, ex);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
