@@ -4,6 +4,14 @@ info:
   version: 1.0.0
   description: 'Xira - Issue tracking and project management'
 
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Projects
+    description: Project management endpoints
+  - name: Boards
+    description: Board management endpoints
+
 paths:
   /auth/register:
     post:
@@ -109,6 +117,47 @@ paths:
       responses:
         '200':
           description: Project updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/boards:
+    post:
+      tags: [ Boards ]
+      operationId: createBoard
+      summary: Add a board to a project
+      description: 'Creates a new board for the specified project. Only accessible by project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddBoardRequest'
+      responses:
+        '201':
+          description: Board created successfully
+          headers:
+            Location:
+              description: URL of the created board resource
+              schema:
+                type: string
+                format: uri
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -232,6 +281,21 @@ components:
           type: string
           description: Project description
           maxLength: 200
+
+    AddBoardRequest:
+      type: object
+      additionalProperties: false
+      required: [ name, type ]
+      properties:
+        name:
+          type: string
+          description: Board name
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          description: Board type
+          enum: [ KANBAN, SCRUM ]
 
     ProjectResponse:
       type: object

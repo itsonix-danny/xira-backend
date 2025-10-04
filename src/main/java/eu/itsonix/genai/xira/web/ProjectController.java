@@ -32,4 +32,5 @@ public class ProjectController implements ProjectsApi {
         projectService.updateProject(key, updateProjectRequest);
         return ResponseEntity.ok().build();
     }
+
 }
