@@ -17,6 +17,8 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Pr
     boolean existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCaseAndRole(final String projectKey, final String email,
             final ProjectRole role);
 
+    boolean existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase(final String projectKey, final String email);
+
     boolean existsByProjectIdAndUserId(final String projectId, final String userId);
 
     Optional<ProjectMember> findByProjectIdAndUserId(final String projectId, final String userId);

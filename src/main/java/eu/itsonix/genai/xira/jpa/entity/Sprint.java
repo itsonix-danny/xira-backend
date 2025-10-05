@@ -3,7 +3,6 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.time.LocalDate;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -37,11 +36,14 @@ public class Sprint {
     @Column(nullable = false)
     private String name;
 
-    @Column
-    private LocalDate startDate;
+    @Column(nullable = false, length = 200)
+    private String goal;
 
     @Column
-    private LocalDate endDate;
+    private Instant startedAt;
+
+    @Column
+    private Instant finishedAt;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
