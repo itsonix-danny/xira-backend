@@ -9,23 +9,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
-import eu.itsonix.genai.xira.jpa.entity.Board;
 import eu.itsonix.genai.xira.jpa.entity.Project;
 import eu.itsonix.genai.xira.jpa.entity.ProjectMember;
 import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
-import eu.itsonix.genai.xira.jpa.repository.BoardRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.mapper.ProjectMapper;
-import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
-import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
-import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
-import eu.itsonix.genai.xira.web.model.ProjectSummaryResponse;
-import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
-import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
+import eu.itsonix.genai.xira.web.model.*;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +28,6 @@ public class ProjectService {
     private final WorkflowService workflowService;
     private final AuthService authService;
     private final XiraUserRepository xiraUserRepository;
-    private final BoardRepository boardRepository;
 
     @Transactional
     public void createProject(final CreateProjectRequest createProjectRequest) {
@@ -140,8 +131,9 @@ public class ProjectService {
     public List<ProjectSummaryResponse> getProjectsForAuthenticatedUser() {
         final XiraUser user = authService.getAuthenticatedUser();
 
-        return projectMemberRepository.findAllByUserId(user.getId()).stream()
-                .map(projectMember -> ProjectMapper.toProjectSummaryResponse(projectMember.getProject(), projectMember))
+        return projectMemberRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(ProjectMapper::toProjectSummaryResponse)
                 .toList();
     }
 
@@ -149,15 +141,10 @@ public class ProjectService {
     public ProjectDetailsResponse getProjectDetails(final String projectKey) {
         final XiraUser user = authService.getAuthenticatedUser();
 
-        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
+        final ProjectMember projectMember = projectMemberRepository
+                .findByProject_KeyIgnoreCaseAndUserId(projectKey, user.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        final ProjectMember projectMember = projectMemberRepository
-                .findByProjectIdAndUserId(project.getId(), user.getId())
-                .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
-
-        final List<Board> boards = boardRepository.findAllByProjectIdOrderByBoardNumberAsc(project.getId());
-
-        return ProjectMapper.toProjectDetailsResponse(project, projectMember, boards);
+        return ProjectMapper.toProjectDetailsResponse(projectMember);
     }
 }

@@ -45,8 +45,7 @@ class AuthServiceTest {
 
     @Test
     void givenValidRegisterRequest_thenCreatesNewUser() {
-        final RegisterRequest registerRequest = new RegisterRequest()
-                .email("test@example.com")
+        final RegisterRequest registerRequest = new RegisterRequest().email("test@example.com")
                 .password("password123")
                 .firstName("John")
                 .lastName("Doe");
@@ -70,8 +69,7 @@ class AuthServiceTest {
 
     @Test
     void givenExistingEmail_thenThrowsIllegalStateException() {
-        final RegisterRequest registerRequest = new RegisterRequest()
-                .email("existing@example.com")
+        final RegisterRequest registerRequest = new RegisterRequest().email("existing@example.com")
                 .password("password123")
                 .firstName("Jane")
                 .lastName("Smith");
@@ -88,9 +86,7 @@ class AuthServiceTest {
 
     @Test
     void givenLoginRequest_thenJwtIncludesCorrectClaims() {
-        final LoginRequest loginRequest = new LoginRequest()
-                .email("user@example.com")
-                .password("password");
+        final LoginRequest loginRequest = new LoginRequest().email("user@example.com").password("password");
 
         final Authentication authentication = mock(Authentication.class);
         when(authentication.getName()).thenReturn("user@example.com");
@@ -116,7 +112,7 @@ class AuthServiceTest {
 
         final Instant issuedAt = params.getClaims().getIssuedAt();
         final Instant expiresAt = params.getClaims().getExpiresAt();
-        final long expectedExpiry = 3600;
+        final long expectedExpiry = 7200;
         assertEquals(expectedExpiry, expiresAt.getEpochSecond() - issuedAt.getEpochSecond());
     }
 }

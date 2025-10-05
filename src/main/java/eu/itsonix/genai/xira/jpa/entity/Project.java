@@ -3,6 +3,7 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.List;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -44,6 +45,10 @@ public class Project {
 
     @OneToOne(mappedBy = "project", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
     private Workflow workflow;
+
+    @OneToMany(mappedBy = "project")
+    @OrderBy("boardNumber ASC")
+    private List<Board> boards;
 
     @CreatedDate
     @Column(nullable = false)
