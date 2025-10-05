@@ -159,6 +159,8 @@ paths:
           $ref: '#/components/responses/Problem'
         '404':
           $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
 
@@ -199,6 +201,8 @@ paths:
         '403':
           $ref: '#/components/responses/Problem'
         '404':
+          $ref: '#/components/responses/Problem'
+        '409':
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
@@ -282,6 +286,48 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects/{key}/members/{userId}:
+    patch:
+      tags: [ Projects ]
+      operationId: updateProjectMemberRole
+      summary: Update the role of a project member
+      description: 'Updates the role of an existing project member. Only accessible by project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: User ID of the project member
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProjectMemberRoleRequest'
+      responses:
+        '200':
+          description: Project member role updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     delete:
       tags: [ Projects ]
       operationId: removeProjectMember
@@ -472,6 +518,14 @@ components:
           description: Board name
           minLength: 1
           maxLength: 100
+
+    UpdateProjectMemberRoleRequest:
+      type: object
+      additionalProperties: false
+      required: [ role ]
+      properties:
+        role:
+          $ref: '#/components/schemas/ProjectMemberRole'
 
     ProjectResponse:
       type: object

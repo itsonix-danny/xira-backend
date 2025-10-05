@@ -14,9 +14,10 @@ import eu.itsonix.genai.xira.jpa.entity.XiraUser;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
+import eu.itsonix.genai.xira.mapper.ProjectMapper;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
+import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 @Service
@@ -86,7 +87,7 @@ public class ProjectService {
             throw new IllegalStateException("User is already a project member");
         }
 
-        final ProjectRole projectRole = mapRole(addProjectMemberRequest.getRole());
+        final ProjectRole projectRole = ProjectMapper.toProjectRole(addProjectMemberRequest.getRole());
 
         projectMemberRepository.save(ProjectMember.builder()
                 .projectId(project.getId())
@@ -102,17 +103,28 @@ public class ProjectService {
         final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        final ProjectMember projectMember = projectMemberRepository
-                .findByProjectIdAndUserId(project.getId(), userId)
+        final ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(project.getId(), userId)
                 .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
 
         projectMemberRepository.delete(projectMember);
     }
 
-    private ProjectRole mapRole(final ProjectMemberRole role) {
-        if (role == null) {
-            throw new IllegalArgumentException("Role must not be null");
+    @Transactional
+    public void updateProjectMemberRole(final String projectKey, final String userId,
+            final UpdateProjectMemberRoleRequest updateProjectMemberRoleRequest) {
+        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+
+        final ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(project.getId(), userId)
+                .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
+
+        final ProjectRole newRole = ProjectMapper.toProjectRole(updateProjectMemberRoleRequest.getRole());
+
+        if (project.getOwnerId().equals(userId) && newRole != ProjectRole.ADMIN) {
+            throw new IllegalStateException("Project owner must remain an admin");
         }
-        return ProjectRole.valueOf(role.getValue());
+
+        projectMember.setRole(newRole);
+        projectMemberRepository.save(projectMember);
     }
 }
