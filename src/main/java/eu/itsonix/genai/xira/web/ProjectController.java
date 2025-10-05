@@ -1,6 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,8 @@ import eu.itsonix.genai.xira.service.ProjectService;
 import eu.itsonix.genai.xira.web.api.ProjectsApi;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
+import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
+import eu.itsonix.genai.xira.web.model.ProjectSummaryResponse;
 import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
@@ -22,6 +25,20 @@ import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 public class ProjectController implements ProjectsApi {
 
     private final ProjectService projectService;
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ProjectSummaryResponse>> getProjects() {
+        final List<ProjectSummaryResponse> projects = projectService.getProjectsForAuthenticatedUser();
+        return ResponseEntity.ok(projects);
+    }
+
+    @Override
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ProjectDetailsResponse> getProjectByKey(final String key) {
+        final ProjectDetailsResponse project = projectService.getProjectDetails(key);
+        return ResponseEntity.ok(project);
+    }
 
     @Override
     @PreAuthorize("isAuthenticated()")

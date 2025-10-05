@@ -1,7 +1,9 @@
 package eu.itsonix.genai.xira.jpa.repository;
 
+import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,10 +14,16 @@ import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, ProjectMemberId> {
 
-    boolean existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCaseAndRole(String projectKey, String email,
-            ProjectRole role);
+    boolean existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCaseAndRole(final String projectKey, final String email,
+            final ProjectRole role);
 
-    boolean existsByProjectIdAndUserId(String projectId, String userId);
+    boolean existsByProjectIdAndUserId(final String projectId, final String userId);
 
-    Optional<ProjectMember> findByProjectIdAndUserId(String projectId, String userId);
+    Optional<ProjectMember> findByProjectIdAndUserId(final String projectId, final String userId);
+
+    @EntityGraph(attributePaths = { "project", "project.owner" })
+    List<ProjectMember> findAllByUserId(final String userId);
+
+    @EntityGraph(attributePaths = { "project", "project.owner", "project.boards" })
+    Optional<ProjectMember> findByProject_KeyIgnoreCaseAndUserId(final String projectKey, final String userId);
 }

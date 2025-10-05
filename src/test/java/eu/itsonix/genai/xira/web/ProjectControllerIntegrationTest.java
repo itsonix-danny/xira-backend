@@ -771,4 +771,184 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(404);
     }
+
+    @Test
+    void givenAuthenticatedUser_whenGetProjects_thenReturnsUserProjects() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("PROJA").name("Project A"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("PROJB").name("Project B"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final var projects = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .when()
+                .get("/projects")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getList(".", ProjectSummaryResponse.class);
+
+        assertThat(projects).hasSize(2);
+        assertThat(projects).extracting("key").containsExactlyInAnyOrder("PROJA", "PROJB");
+        assertThat(projects).extracting("isOwner").containsOnly(true);
+        assertThat(projects).extracting("isAdmin").containsOnly(true);
+    }
+
+    @Test
+    void givenMemberOfMultipleProjects_whenGetProjects_thenReturnsOnlyUserProjects() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("OWNED").name("Owned Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String memberEmail = "member@example.com";
+        registerUser(memberEmail, "Member", "User");
+        final String memberToken = login(memberEmail);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
+                .body(new CreateProjectRequest().key("OTHER").name("Other Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String memberUserId = getUserIdByEmail(ownerToken, memberEmail);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(memberUserId)).role(ProjectMemberRole.DEVELOPER))
+                .when()
+                .post("/projects/OWNED/members")
+                .then()
+                .statusCode(201);
+
+        final var memberProjects = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
+                .when()
+                .get("/projects")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getList(".", ProjectSummaryResponse.class);
+
+        assertThat(memberProjects).hasSize(2);
+        assertThat(memberProjects).extracting("key").containsExactlyInAnyOrder("OWNED", "OTHER");
+
+        final var ownedProject = memberProjects.stream().filter(p -> p.getKey().equals("OWNED")).findFirst().orElseThrow();
+        assertThat(ownedProject.getIsOwner()).isFalse();
+        assertThat(ownedProject.getIsAdmin()).isFalse();
+
+        final var otherProject = memberProjects.stream().filter(p -> p.getKey().equals("OTHER")).findFirst().orElseThrow();
+        assertThat(otherProject.getIsOwner()).isTrue();
+        assertThat(otherProject.getIsAdmin()).isTrue();
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetProjects_thenReturnsUnauthorized() {
+        given().contentType(ContentType.JSON)
+                .when()
+                .get("/projects")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenProjectMember_whenGetProjectByKey_thenReturnsProjectDetails() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project").description("Test description"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final var projectDetails = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .when()
+                .get("/projects/XIRA")
+                .then()
+                .statusCode(200)
+                .extract()
+                .as(ProjectDetailsResponse.class);
+
+        assertThat(projectDetails.getKey()).isEqualTo("XIRA");
+        assertThat(projectDetails.getName()).isEqualTo("Xira Project");
+        assertThat(projectDetails.getDescription()).isEqualTo("Test description");
+        assertThat(projectDetails.getIsOwner()).isTrue();
+        assertThat(projectDetails.getIsAdmin()).isTrue();
+        assertThat(projectDetails.getBoards()).isEmpty();
+    }
+
+    @Test
+    void givenNonMember_whenGetProjectByKey_thenReturnsNotFound() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String nonMemberEmail = "nonmember@example.com";
+        registerUser(nonMemberEmail, "Non", "Member");
+        final String nonMemberToken = login(nonMemberEmail);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", nonMemberToken))
+                .when()
+                .get("/projects/XIRA")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenNonExistentProject_whenGetProjectByKey_thenReturnsNotFound() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .when()
+                .get("/projects/NONEXISTENT")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetProjectByKey_thenReturnsUnauthorized() {
+        given().contentType(ContentType.JSON)
+                .when()
+                .get("/projects/XIRA")
+                .then()
+                .statusCode(401);
+    }
 }

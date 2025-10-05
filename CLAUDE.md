@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Xira
+> ## Project Xira
 
 This repository contains the backend code for the project Xira, a Jira-like issue tracker and project management system
 for software development teams.
@@ -87,6 +87,8 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 
 ### Core Principles
 
+- **Tests**: Always test new code with unit tests and integration tests (see more details below in 'Testing Approach')
+- **Clean Code**: Write clean, readable code with good naming and comments
 - **Consistency**: Always follow the same coding style and patterns you can see in similar classes in this project
   (e.g., other services, entities, controllers, mappers, tests, etc.)
 - **Lean Code**: Simplicity first, complexity only when necessary
@@ -102,6 +104,8 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 
 - **Query Derivation**: Use Spring Data JPA method naming (e.g., `findByProjectOwnerEmail(final String email)`) and
   avoid `@Query` unless absolutely necessary
+- **Avoid (N+1)-Problem**: When related entities are needed, use `@EntityGraph` on repository methods (e.g.,
+  `@EntityGraph(attributePaths = { "project", "project.owner" })` for `findAllByUserId(final String userId)`)
 - **Transactional Boundaries**: Mark read-only operations with `@Transactional(readOnly = true)`
 - **Service Layer**: All business logic in services, controllers only handle HTTP concerns
 - **Error Handling**: Log errors with context, throw domain-specific exceptions

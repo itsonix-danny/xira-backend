@@ -2,6 +2,8 @@ package eu.itsonix.genai.xira.service;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,10 +17,7 @@ import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.mapper.ProjectMapper;
-import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
-import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
-import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
-import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
+import eu.itsonix.genai.xira.web.model.*;
 
 @Service
 @RequiredArgsConstructor
@@ -126,5 +125,26 @@ public class ProjectService {
 
         projectMember.setRole(newRole);
         projectMemberRepository.save(projectMember);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProjectSummaryResponse> getProjectsForAuthenticatedUser() {
+        final XiraUser user = authService.getAuthenticatedUser();
+
+        return projectMemberRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(ProjectMapper::toProjectSummaryResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ProjectDetailsResponse getProjectDetails(final String projectKey) {
+        final XiraUser user = authService.getAuthenticatedUser();
+
+        final ProjectMember projectMember = projectMemberRepository
+                .findByProject_KeyIgnoreCaseAndUserId(projectKey, user.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+
+        return ProjectMapper.toProjectDetailsResponse(projectMember);
     }
 }

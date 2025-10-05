@@ -2,6 +2,7 @@ package eu.itsonix.genai.xira.service;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -20,6 +21,7 @@ import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.*;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -301,5 +303,88 @@ class ProjectServiceTest {
         assertThatThrownBy(() -> projectService.updateProjectMemberRole("XIRA", "user-id", request))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Project member not found");
+    }
+
+    @Test
+    void givenAuthenticatedUser_whenGetProjectsForAuthenticatedUser_thenReturnsProjects() {
+        final XiraUser user = XiraUser.builder().id("user-id").email("user@example.com").build();
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+
+        final Project project1 = Project.builder()
+                .id("project-1")
+                .key("PROJ1")
+                .name("Project 1")
+                .ownerId("owner-id")
+                .build();
+
+        final Project project2 = Project.builder()
+                .id("project-2")
+                .key("PROJ2")
+                .name("Project 2")
+                .ownerId("user-id")
+                .build();
+
+        final ProjectMember member1 = ProjectMember.builder()
+                .projectId("project-1")
+                .userId("user-id")
+                .project(project1)
+                .role(ProjectRole.DEVELOPER)
+                .build();
+
+        final ProjectMember member2 = ProjectMember.builder()
+                .projectId("project-2")
+                .userId("user-id")
+                .project(project2)
+                .role(ProjectRole.ADMIN)
+                .build();
+
+        when(projectMemberRepository.findAllByUserId("user-id")).thenReturn(List.of(member1, member2));
+
+        final var projects = projectService.getProjectsForAuthenticatedUser();
+
+        assertThat(projects).hasSize(2);
+    }
+
+    @Test
+    void givenAuthenticatedUserAndValidProject_whenGetProjectDetails_thenReturnsProjectDetails() {
+        final XiraUser user = XiraUser.builder().id("user-id").email("user@example.com").build();
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .name("Xira Project")
+                .ownerId("owner-id")
+                .boards(List.of())
+                .build();
+
+        final ProjectMember projectMember = ProjectMember.builder()
+                .projectId("project-id")
+                .userId("user-id")
+                .project(project)
+                .role(ProjectRole.ADMIN)
+                .build();
+
+        when(projectMemberRepository.findByProject_KeyIgnoreCaseAndUserId("XIRA", "user-id"))
+                .thenReturn(Optional.of(projectMember));
+
+        final var projectDetails = projectService.getProjectDetails("XIRA");
+
+        assertThat(projectDetails).isNotNull();
+        assertThat(projectDetails.getKey()).isEqualTo("XIRA");
+        assertThat(projectDetails.getName()).isEqualTo("Xira Project");
+    }
+
+    @Test
+    void givenNonMember_whenGetProjectDetails_thenThrowsEntityNotFound() {
+        final XiraUser user = XiraUser.builder().id("user-id").email("user@example.com").build();
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+
+        when(projectMemberRepository.findByProject_KeyIgnoreCaseAndUserId("XIRA", "user-id"))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.getProjectDetails("XIRA"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project not found");
     }
 }
