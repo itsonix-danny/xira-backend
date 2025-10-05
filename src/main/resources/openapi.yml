@@ -96,6 +96,26 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects:
+    get:
+      tags: [ Projects ]
+      operationId: getProjects
+      summary: Get projects of the authenticated user
+      description: Returns all projects the authenticated user is a member of.
+      security:
+        - BearerAuth: [ ]
+      responses:
+        '200':
+          description: Projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectSummaryResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     post:
       tags: [ Projects ]
       operationId: createProject
@@ -128,6 +148,35 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects/{key}:
+    get:
+      tags: [ Projects ]
+      operationId: getProjectByKey
+      summary: Get project details
+      description: 'Returns detailed information about a project including its boards.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDetailsResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     patch:
       tags: [ Projects ]
       operationId: updateProject
@@ -379,6 +428,56 @@ components:
       bearerFormat: JWT
 
   schemas:
+    ProjectBoardResponse:
+      type: object
+      additionalProperties: false
+      required: [ name, boardNumber, type ]
+      properties:
+        name:
+          type: string
+          description: Board name
+        boardNumber:
+          type: integer
+          format: int32
+          description: Unique board number within the project
+        type:
+          type: string
+          description: Board type
+          enum: [ SCRUM, KANBAN ]
+
+    ProjectSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [ key, name, isOwner, isAdmin ]
+      properties:
+        key:
+          type: string
+          description: Project key
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          description: Project description
+          nullable: true
+        isOwner:
+          type: boolean
+          description: Whether the authenticated user is the owner of the project
+        isAdmin:
+          type: boolean
+          description: Whether the authenticated user is an admin of the project
+
+    ProjectDetailsResponse:
+      allOf:
+        - $ref: '#/components/schemas/ProjectSummaryResponse'
+        - type: object
+          required: [ boards ]
+          properties:
+            boards:
+              type: array
+              items:
+                $ref: '#/components/schemas/ProjectBoardResponse'
+
     Problem:
       type: object
       additionalProperties: true
