@@ -1,6 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
 import java.net.URI;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,8 +46,8 @@ public class ProjectController implements ProjectsApi {
 
     @Override
     @PreAuthorize("@authService.isProjectAdmin(#key)")
-    public ResponseEntity<Void> removeProjectMember(final String key, final String email) {
-        projectService.removeProjectMember(key, email);
+    public ResponseEntity<Void> removeProjectMember(final String key, final UUID userId) {
+        projectService.removeProjectMember(key, userId.toString());
         return ResponseEntity.noContent().build();
     }
 }

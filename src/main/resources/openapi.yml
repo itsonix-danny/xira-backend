@@ -7,12 +7,46 @@ info:
 tags:
   - name: Auth
     description: Authentication endpoints
+  - name: Users
+    description: User management endpoints
   - name: Projects
     description: Project management endpoints
   - name: Boards
     description: Board management endpoints
 
 paths:
+  /users:
+    get:
+      tags: [ Users ]
+      operationId: getUsers
+      summary: Search for users by email
+      description: 'Find users by email address. Returns user details including ID.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: email
+          in: query
+          required: true
+          description: Email address to search for
+          schema:
+            type: string
+            format: email
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
   /auth/register:
     post:
       tags: [ Auth ]
@@ -247,7 +281,7 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
-  /projects/{key}/members/{email}:
+  /projects/{key}/members/{userId}:
     delete:
       tags: [ Projects ]
       operationId: removeProjectMember
@@ -262,13 +296,13 @@ paths:
           description: Project key
           schema:
             type: string
-        - name: email
+        - name: userId
           in: path
           required: true
-          description: Email address of the project member
+          description: User ID of the project member
           schema:
             type: string
-            format: email
+            format: uuid
       responses:
         '204':
           description: Project member removed successfully
@@ -364,12 +398,12 @@ components:
     AddProjectMemberRequest:
       type: object
       additionalProperties: false
-      required: [ email, role ]
+      required: [ userId, role ]
       properties:
-        email:
+        userId:
           type: string
-          format: email
-          description: Email address of the user to add as project member
+          format: uuid
+          description: User ID of the user to add as project member
         role:
           $ref: '#/components/schemas/ProjectMemberRole'
 
@@ -454,3 +488,23 @@ components:
           type: string
           format: email
           description: Email of the project owner
+
+    UserResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, email, firstName, lastName ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user ID
+        email:
+          type: string
+          format: email
+          description: User email address
+        firstName:
+          type: string
+          description: User first name
+        lastName:
+          type: string
+          description: User last name

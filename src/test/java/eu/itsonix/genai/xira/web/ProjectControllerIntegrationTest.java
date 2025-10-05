@@ -1,17 +1,14 @@
 package eu.itsonix.genai.xira.web;
 
+import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 
 import eu.itsonix.genai.xira.jpa.repository.WorkflowRepository;
 import eu.itsonix.genai.xira.jpa.repository.WorkflowStatusRepository;
-import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
-import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
-import eu.itsonix.genai.xira.web.model.LoginRequest;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
-import eu.itsonix.genai.xira.web.model.RegisterRequest;
-import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
+import eu.itsonix.genai.xira.web.model.*;
 import io.restassured.http.ContentType;
 
 import static io.restassured.RestAssured.given;
@@ -120,13 +117,15 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     private void registerUser() {
-        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        registerUser(EMAIL, "Owner", "Example");
     }
 
-    private void registerUser(final String email, final String password, final String firstName,
-            final String lastName) {
+    private void registerUser(final String email, final String firstName, final String lastName) {
         given().contentType(ContentType.JSON)
-                .body(new RegisterRequest().email(email).password(password).firstName(firstName).lastName(lastName))
+                .body(new RegisterRequest().email(email)
+                        .password(ProjectControllerIntegrationTest.PASSWORD)
+                        .firstName(firstName)
+                        .lastName(lastName))
                 .when()
                 .post("/auth/register")
                 .then()
@@ -134,12 +133,12 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     private String login() {
-        return login(EMAIL, PASSWORD);
+        return login(EMAIL);
     }
 
-    private String login(final String email, final String password) {
+    private String login(final String email) {
         return given().contentType(ContentType.JSON)
-                .body(new LoginRequest().email(email).password(password))
+                .body(new LoginRequest().email(email).password(ProjectControllerIntegrationTest.PASSWORD))
                 .when()
                 .post("/auth/login")
                 .then()
@@ -147,6 +146,19 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .extract()
                 .jsonPath()
                 .getString("access_token");
+    }
+
+    private String getUserIdByEmail(final String token, final String email) {
+        return given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("email", email)
+                .when()
+                .get("/users")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getString("id");
     }
 
     @Test
@@ -407,8 +419,8 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         final String adminEmail = "admin.member@example.com";
-        registerUser(adminEmail, PASSWORD, "Admin", "Member");
-        final String adminToken = login(adminEmail, PASSWORD);
+        registerUser(adminEmail, "Admin", "Member");
+        final String adminToken = login(adminEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", adminToken))
@@ -418,9 +430,11 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(403);
 
+        final String adminUserId = getUserIdByEmail(ownerToken, adminEmail);
+
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(adminEmail).role(ProjectMemberRole.ADMIN))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(adminUserId)).role(ProjectMemberRole.ADMIN))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -449,11 +463,13 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         final String memberEmail = "member@example.com";
-        registerUser(memberEmail, PASSWORD, "Member", "User");
+        registerUser(memberEmail, "Member", "User");
+
+        final String memberUserId = getUserIdByEmail(ownerToken, memberEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(memberEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(memberUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -461,7 +477,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(memberEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(memberUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -482,12 +498,14 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         final String adminEmail = "admin.remove@example.com";
-        registerUser(adminEmail, PASSWORD, "Remove", "Admin");
-        final String adminToken = login(adminEmail, PASSWORD);
+        registerUser(adminEmail, "Remove", "Admin");
+        final String adminToken = login(adminEmail);
+
+        final String adminUserId = getUserIdByEmail(ownerToken, adminEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(adminEmail).role(ProjectMemberRole.ADMIN))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(adminUserId)).role(ProjectMemberRole.ADMIN))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -496,7 +514,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
                 .when()
-                .delete("/projects/XIRA/members/{email}", adminEmail)
+                .delete("/projects/XIRA/members/{userId}", adminUserId)
                 .then()
                 .statusCode(204);
 
@@ -523,24 +541,28 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         final String developerEmail = "developer@example.com";
-        registerUser(developerEmail, PASSWORD, "Dev", "User");
+        registerUser(developerEmail, "Dev", "User");
+
+        final String developerUserId = getUserIdByEmail(ownerToken, developerEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(developerEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(developerUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
                 .statusCode(201);
 
-        final String developerToken = login(developerEmail, PASSWORD);
+        final String developerToken = login(developerEmail);
 
         final String newMemberEmail = "new.member@example.com";
-        registerUser(newMemberEmail, PASSWORD, "New", "Member");
+        registerUser(newMemberEmail, "New", "Member");
+
+        final String newMemberUserId = getUserIdByEmail(ownerToken, newMemberEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
-                .body(new AddProjectMemberRequest().email(newMemberEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(newMemberUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -561,24 +583,28 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201);
 
         final String developerEmail = "developer.remove@example.com";
-        registerUser(developerEmail, PASSWORD, "Dev", "Remove");
+        registerUser(developerEmail, "Dev", "Remove");
+
+        final String developerUserId = getUserIdByEmail(ownerToken, developerEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(developerEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(developerUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
                 .statusCode(201);
 
-        final String developerToken = login(developerEmail, PASSWORD);
+        final String developerToken = login(developerEmail);
 
         final String targetEmail = "target@example.com";
-        registerUser(targetEmail, PASSWORD, "Target", "User");
+        registerUser(targetEmail, "Target", "User");
+
+        final String targetUserId = getUserIdByEmail(ownerToken, targetEmail);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email(targetEmail).role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(targetUserId)).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -587,7 +613,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
                 .when()
-                .delete("/projects/XIRA/members/{email}", targetEmail)
+                .delete("/projects/XIRA/members/{userId}", targetUserId)
                 .then()
                 .statusCode(403);
     }
@@ -607,7 +633,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
-                .body(new AddProjectMemberRequest().email("missing@example.com").role(ProjectMemberRole.DEVELOPER))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000")).role(ProjectMemberRole.DEVELOPER))
                 .when()
                 .post("/projects/XIRA/members")
                 .then()
@@ -630,7 +656,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
                 .when()
-                .delete("/projects/XIRA/members/{email}", "missing@example.com")
+                .delete("/projects/XIRA/members/{userId}", "550e8400-e29b-41d4-a716-446655440000")
                 .then()
                 .statusCode(404);
     }

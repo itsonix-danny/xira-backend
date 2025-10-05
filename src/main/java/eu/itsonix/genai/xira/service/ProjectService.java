@@ -15,8 +15,8 @@ import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
+import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 @Service
@@ -78,15 +78,11 @@ public class ProjectService {
         final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        if (!authService.isProjectAdmin(projectKey)) {
-            throw new AccessDeniedException("User is not a project admin");
-        }
-
-        final XiraUser user = xiraUserRepository.findByEmailIgnoreCase(addProjectMemberRequest.getEmail())
+        final String userId = addProjectMemberRequest.getUserId().toString();
+        final XiraUser user = xiraUserRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        if (projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase(projectKey,
-                addProjectMemberRequest.getEmail())) {
+        if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId)) {
             throw new IllegalStateException("User is already a project member");
         }
 
@@ -94,7 +90,7 @@ public class ProjectService {
 
         projectMemberRepository.save(ProjectMember.builder()
                 .projectId(project.getId())
-                .userId(user.getId())
+                .userId(userId)
                 .project(project)
                 .xiraUser(user)
                 .role(projectRole)
@@ -102,16 +98,12 @@ public class ProjectService {
     }
 
     @Transactional
-    public void removeProjectMember(final String projectKey, final String email) {
-        projectRepository.findByKeyIgnoreCase(projectKey)
+    public void removeProjectMember(final String projectKey, final String userId) {
+        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        if (!authService.isProjectAdmin(projectKey)) {
-            throw new AccessDeniedException("User is not a project admin");
-        }
-
         final ProjectMember projectMember = projectMemberRepository
-                .findByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase(projectKey, email)
+                .findByProjectIdAndUserId(project.getId(), userId)
                 .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
 
         projectMemberRepository.delete(projectMember);
