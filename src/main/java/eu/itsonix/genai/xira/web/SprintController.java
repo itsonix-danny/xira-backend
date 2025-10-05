@@ -23,10 +23,10 @@ public class SprintController implements SprintsApi {
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")
-    public ResponseEntity<SprintResponse> createSprint(final String key, final AddSprintRequest addSprintRequest) {
-        final SprintResponse sprint = sprintService.createSprint(key, addSprintRequest);
+    public ResponseEntity<Void> createSprint(final String key, final AddSprintRequest addSprintRequest) {
+        final String sprintId = sprintService.createSprint(key, addSprintRequest);
         return ResponseEntity
-                .created(URI.create(String.format("/projects/%s/sprints/%s", key, sprint.getId()))).body(sprint);
+                .created(URI.create(String.format("/projects/%s/sprints/%s", key, sprintId))).build();
     }
 
     @Override

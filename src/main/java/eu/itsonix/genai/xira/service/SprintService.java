@@ -3,18 +3,13 @@ package eu.itsonix.genai.xira.service;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
-import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
-import eu.itsonix.genai.xira.jpa.entity.Project;
-import eu.itsonix.genai.xira.jpa.entity.Sprint;
-import eu.itsonix.genai.xira.jpa.entity.SprintIssue;
-import eu.itsonix.genai.xira.jpa.entity.SprintState;
-import eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory;
+import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintIssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintRepository;
@@ -32,19 +27,18 @@ public class SprintService {
     private final SprintIssueRepository sprintIssueRepository;
 
     @Transactional
-    public SprintResponse createSprint(final String projectKey, final AddSprintRequest addSprintRequest) {
+    public String createSprint(final String projectKey, final AddSprintRequest addSprintRequest) {
         final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
-        final Sprint sprint = Sprint.builder()
+        final Sprint sprint = sprintRepository.save(Sprint.builder()
                 .project(project)
                 .name(addSprintRequest.getName())
                 .goal(addSprintRequest.getGoal())
                 .state(SprintState.PLANNED)
-                .build();
+                .build());
 
-        final Sprint savedSprint = sprintRepository.save(sprint);
-        return SprintMapper.toSprintResponse(savedSprint);
+        return sprint.getId();
     }
 
     @Transactional
@@ -64,8 +58,7 @@ public class SprintService {
             sprint.setGoal(updateSprintRequest.getGoal());
         }
 
-        final Sprint savedSprint = sprintRepository.save(sprint);
-        return SprintMapper.toSprintResponse(savedSprint);
+        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
     }
 
     @Transactional
@@ -101,8 +94,7 @@ public class SprintService {
         sprint.setStartedAt(Instant.now());
         sprint.setFinishedAt(null);
 
-        final Sprint savedSprint = sprintRepository.save(sprint);
-        return SprintMapper.toSprintResponse(savedSprint);
+        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
     }
 
     @Transactional
@@ -113,20 +105,13 @@ public class SprintService {
             throw new IllegalStateException("Only active sprints can be finished");
         }
 
-        final List<SprintIssue> sprintIssues = sprintIssueRepository.findAllBySprintId(sprint.getId());
-        final List<SprintIssue> unfinishedIssues = sprintIssues.stream()
-                .filter(sprintIssue -> sprintIssue.getIssue().getStatus().getCategory() != WorkflowStatusCategory.DONE)
-                .toList();
-
-        if (!unfinishedIssues.isEmpty()) {
-            sprintIssueRepository.deleteAll(unfinishedIssues);
-        }
+        sprintIssueRepository.deleteAllBySprintIdAndIssue_Status_CategoryNot(sprint.getId(),
+                WorkflowStatusCategory.DONE);
 
         sprint.setState(SprintState.CLOSED);
         sprint.setFinishedAt(Instant.now());
 
-        final Sprint savedSprint = sprintRepository.save(sprint);
-        return SprintMapper.toSprintResponse(savedSprint);
+        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
     }
 
     private Sprint getSprintForProject(final String projectKey, final String sprintId) {

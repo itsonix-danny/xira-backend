@@ -1,20 +1,16 @@
 package eu.itsonix.genai.xira.web;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.matchesPattern;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
 import io.restassured.http.ContentType;
+
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.*;
 
 class SprintControllerIntegrationTest extends BaseIntegrationTest {
 
@@ -33,12 +29,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .post("/projects/{key}/sprints", PROJECT_KEY)
                 .then()
                 .statusCode(201)
-                .header(HttpHeaders.LOCATION, matchesPattern("^/projects/XIRA/sprints/.+$"))
-                .body("name", equalTo("Sprint 1"))
-                .body("goal", equalTo("Deliver MVP"))
-                .body("state", equalTo("PLANNED"))
-                .body("startedAt", nullValue())
-                .body("finishedAt", nullValue());
+                .header(HttpHeaders.LOCATION, matchesPattern("^/projects/XIRA/sprints/.+$"));
     }
 
     @Test
@@ -60,7 +51,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void givenProjectMember_whenUpdateSprint_thenReturnsUpdated() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
@@ -70,13 +61,15 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(200)
                 .body("name", equalTo("Updated Sprint"))
-                .body("goal", equalTo("Updated goal"));
+                .body("goal", equalTo("Updated goal"))
+                .body("state", equalTo("PLANNED"))
+                .body("createdAt", notNullValue());
     }
 
     @Test
     void givenFinishedSprint_whenUpdateSprint_thenReturnsConflict() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
         startSprint(ownerToken, sprintId);
         finishSprint(ownerToken, sprintId);
 
@@ -93,7 +86,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void givenProjectMember_whenDeleteSprint_thenReturnsNoContent() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
@@ -106,7 +99,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     @Test
     void givenActiveSprint_whenDeleteSprint_thenReturnsConflict() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
         startSprint(ownerToken, sprintId);
 
         given().contentType(ContentType.JSON)
@@ -119,30 +112,26 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenProjectMember_whenStartSprint_thenReturnsActive() {
+    void givenPlannedSprint_whenStartSprint_thenReturnsActive() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
-
-        registerUser("developer@example.com", OWNER_PASSWORD, "Dev", "User");
-        final String developerToken = login("developer@example.com", OWNER_PASSWORD);
-        final String developerId = getUserIdByEmail(ownerToken, "developer@example.com");
-        addProjectMember(ownerToken, developerId, ProjectMemberRole.DEVELOPER);
+        final String sprintId = createSprint(ownerToken);
 
         given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, bearer(developerToken))
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
                 .when()
                 .post("/projects/{key}/sprints/{sprintId}/start", PROJECT_KEY, UUID.fromString(sprintId))
                 .then()
                 .statusCode(200)
                 .body("state", equalTo("ACTIVE"))
                 .body("startedAt", notNullValue())
-                .body("finishedAt", nullValue());
+                .body("finishedAt", nullValue())
+                .body("createdAt", notNullValue());
     }
 
     @Test
     void givenFinishedSprint_whenStartSprint_thenReturnsConflict() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
         startSprint(ownerToken, sprintId);
         finishSprint(ownerToken, sprintId);
 
@@ -156,9 +145,9 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenProjectMember_whenFinishSprint_thenReturnsClosed() {
+    void givenActiveSprint_whenFinishSprint_thenReturnsClosed() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
         startSprint(ownerToken, sprintId);
 
         given().contentType(ContentType.JSON)
@@ -168,13 +157,15 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(200)
                 .body("state", equalTo("CLOSED"))
-                .body("finishedAt", notNullValue());
+                .body("startedAt", notNullValue())
+                .body("finishedAt", notNullValue())
+                .body("createdAt", notNullValue());
     }
 
     @Test
     void givenNonActiveSprint_whenFinishSprint_thenReturnsConflict() {
         final String ownerToken = prepareProjectOwner();
-        final String sprintId = createSprint(ownerToken, "Sprint 1", "Deliver MVP");
+        final String sprintId = createSprint(ownerToken);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
@@ -196,17 +187,17 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
         return String.format("Bearer %s", token);
     }
 
-    private String createSprint(final String token, final String name, final String goal) {
-        return given().contentType(ContentType.JSON)
+    private String createSprint(final String token) {
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, bearer(token))
-                .body(new AddSprintRequest().name(name).goal(goal))
+                .body(new AddSprintRequest().name("Sprint 1").goal("Deliver MVP"))
                 .when()
                 .post("/projects/{key}/sprints", PROJECT_KEY)
                 .then()
                 .statusCode(201)
                 .extract()
-                .jsonPath()
-                .getString("id");
+                .header(HttpHeaders.LOCATION);
+        return location.substring(location.lastIndexOf('/') + 1);
     }
 
     private void startSprint(final String token, final String sprintId) {

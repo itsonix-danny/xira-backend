@@ -19,6 +19,7 @@ public final class SprintMapper {
                 .name(sprint.getName())
                 .goal(sprint.getGoal())
                 .state(toSprintState(sprint.getState()))
+                .createdAt(toOffsetDateTime(sprint.getCreatedAt()))
                 .startedAt(toOffsetDateTime(sprint.getStartedAt()))
                 .finishedAt(toOffsetDateTime(sprint.getFinishedAt()));
     }

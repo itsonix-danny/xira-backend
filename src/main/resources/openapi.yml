@@ -288,10 +288,6 @@ paths:
               schema:
                 type: string
                 format: uri
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SprintResponse'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -869,7 +865,7 @@ components:
     SprintResponse:
       type: object
       additionalProperties: false
-      required: [ id, name, goal, state ]
+      required: [ id, name, goal, state, createdAt ]
       properties:
         id:
           type: string
@@ -883,6 +879,10 @@ components:
           description: Sprint goal
         state:
           $ref: '#/components/schemas/SprintState'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the sprint was created
         startedAt:
           type: string
           format: date-time

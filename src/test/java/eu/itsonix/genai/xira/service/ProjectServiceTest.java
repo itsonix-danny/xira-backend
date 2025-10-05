@@ -194,7 +194,7 @@ class ProjectServiceTest {
 
     @Test
     void givenValidRequest_whenRemoveProjectMember_thenDeletesMember() {
-        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").ownerId("owner-id").build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
 
@@ -222,7 +222,7 @@ class ProjectServiceTest {
 
     @Test
     void givenNonExistingMember_whenRemoveProjectMember_thenThrowsEntityNotFound() {
-        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").ownerId("owner-id").build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
         when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id")).thenReturn(Optional.empty());
@@ -383,8 +383,7 @@ class ProjectServiceTest {
         when(projectMemberRepository.findByProject_KeyIgnoreCaseAndUserId("XIRA", "user-id"))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> projectService.getProjectDetails("XIRA"))
-                .isInstanceOf(EntityNotFoundException.class)
+        assertThatThrownBy(() -> projectService.getProjectDetails("XIRA")).isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Project not found");
     }
 }

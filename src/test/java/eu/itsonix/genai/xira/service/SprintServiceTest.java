@@ -1,44 +1,30 @@
 package eu.itsonix.genai.xira.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import eu.itsonix.genai.xira.jpa.entity.Issue;
-import eu.itsonix.genai.xira.jpa.entity.IssuePriority;
-import eu.itsonix.genai.xira.jpa.entity.IssueType;
-import eu.itsonix.genai.xira.jpa.entity.Project;
-import eu.itsonix.genai.xira.jpa.entity.Sprint;
-import eu.itsonix.genai.xira.jpa.entity.SprintIssue;
-import eu.itsonix.genai.xira.jpa.entity.SprintState;
-import eu.itsonix.genai.xira.jpa.entity.Workflow;
-import eu.itsonix.genai.xira.jpa.entity.WorkflowStatus;
-import eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory;
-import eu.itsonix.genai.xira.jpa.entity.XiraUser;
+import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintIssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintRepository;
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
 import eu.itsonix.genai.xira.web.model.SprintResponse;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SprintServiceTest {
@@ -59,7 +45,7 @@ class SprintServiceTest {
     private SprintService sprintService;
 
     @Test
-    void givenExistingProject_whenCreateSprint_thenReturnsSprintResponse() {
+    void givenExistingProject_whenCreateSprint_thenReturnsSprintId() {
         final Project project = project();
         final String sprintId = UUID.randomUUID().toString();
 
@@ -70,19 +56,17 @@ class SprintServiceTest {
             return sprint;
         });
 
-        final SprintResponse response = sprintService.createSprint(PROJECT_KEY,
+        final String returnedId = sprintService.createSprint(PROJECT_KEY,
                 new AddSprintRequest().name("Sprint 1").goal("Deliver feature"));
 
-        assertThat(response.getId()).isEqualTo(UUID.fromString(sprintId));
-        assertThat(response.getName()).isEqualTo("Sprint 1");
-        assertThat(response.getGoal()).isEqualTo("Deliver feature");
-        assertThat(response.getState()).isEqualTo(eu.itsonix.genai.xira.web.model.SprintState.PLANNED);
+        assertThat(returnedId).isEqualTo(sprintId);
 
         final ArgumentCaptor<Sprint> sprintCaptor = ArgumentCaptor.forClass(Sprint.class);
         verify(sprintRepository).save(sprintCaptor.capture());
+        assertThat(sprintCaptor.getValue().getName()).isEqualTo("Sprint 1");
+        assertThat(sprintCaptor.getValue().getGoal()).isEqualTo("Deliver feature");
         assertThat(sprintCaptor.getValue().getState()).isEqualTo(SprintState.PLANNED);
         assertThat(sprintCaptor.getValue().getProject()).isEqualTo(project);
-        assertThat(sprintCaptor.getValue().getGoal()).isEqualTo("Deliver feature");
     }
 
     @Test
@@ -120,8 +104,7 @@ class SprintServiceTest {
                 .thenReturn(Optional.of(sprint));
 
         assertThatThrownBy(() -> sprintService.updateSprint(PROJECT_KEY, sprint.getId(),
-                new UpdateSprintRequest().name("Updated Sprint")))
-                .isInstanceOf(IllegalStateException.class)
+                new UpdateSprintRequest().name("Updated Sprint"))).isInstanceOf(IllegalStateException.class)
                 .hasMessage("Finished sprints cannot be updated");
 
         verify(sprintRepository, never()).save(any(Sprint.class));
@@ -129,12 +112,10 @@ class SprintServiceTest {
 
     @Test
     void givenUnknownSprint_whenUpdateSprint_thenThrowsEntityNotFound() {
-        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, "unknown"))
-                .thenReturn(Optional.empty());
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, "unknown")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sprintService.updateSprint(PROJECT_KEY, "unknown",
-                new UpdateSprintRequest().name("Updated Sprint")))
-                .isInstanceOf(EntityNotFoundException.class)
+                new UpdateSprintRequest().name("Updated Sprint"))).isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Sprint not found");
     }
 
@@ -226,13 +207,9 @@ class SprintServiceTest {
         final Sprint sprint = plannedSprint();
         sprint.setState(SprintState.ACTIVE);
         sprint.setStartedAt(Instant.now().minusSeconds(3600));
-        final SprintIssue doneIssue = sprintIssue(sprint.getId(), doneWorkflowStatus());
-        final SprintIssue todoIssue = sprintIssue(sprint.getId(), todoWorkflowStatus());
 
         when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
                 .thenReturn(Optional.of(sprint));
-        when(sprintIssueRepository.findAllBySprintId(sprint.getId()))
-                .thenReturn(List.of(doneIssue, todoIssue));
         when(sprintRepository.save(sprint)).thenReturn(sprint);
 
         final SprintResponse response = sprintService.finishSprint(PROJECT_KEY, sprint.getId());
@@ -240,24 +217,23 @@ class SprintServiceTest {
         assertThat(response.getState()).isEqualTo(eu.itsonix.genai.xira.web.model.SprintState.CLOSED);
         assertThat(sprint.getState()).isEqualTo(SprintState.CLOSED);
         assertThat(sprint.getFinishedAt()).isNotNull();
-        verify(sprintIssueRepository, times(1)).deleteAll(List.of(todoIssue));
+        verify(sprintIssueRepository, times(1)).deleteAllBySprintIdAndIssue_Status_CategoryNot(sprint.getId(),
+                WorkflowStatusCategory.DONE);
     }
 
     @Test
-    void givenActiveSprintWithoutUnfinishedIssues_whenFinishSprint_thenKeepsAssignments() {
+    void givenActiveSprintWithoutUnfinishedIssues_whenFinishSprint_thenDeletesUnfinishedIssues() {
         final Sprint sprint = plannedSprint();
         sprint.setState(SprintState.ACTIVE);
-        final SprintIssue doneIssue = sprintIssue(sprint.getId(), doneWorkflowStatus());
 
         when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
                 .thenReturn(Optional.of(sprint));
-        when(sprintIssueRepository.findAllBySprintId(sprint.getId()))
-                .thenReturn(List.of(doneIssue));
         when(sprintRepository.save(sprint)).thenReturn(sprint);
 
         sprintService.finishSprint(PROJECT_KEY, sprint.getId());
 
-        verify(sprintIssueRepository, never()).deleteAll(any());
+        verify(sprintIssueRepository, times(1)).deleteAllBySprintIdAndIssue_Status_CategoryNot(sprint.getId(),
+                WorkflowStatusCategory.DONE);
         assertThat(sprint.getState()).isEqualTo(SprintState.CLOSED);
     }
 
@@ -270,12 +246,10 @@ class SprintServiceTest {
         assertThatThrownBy(() -> sprintService.finishSprint(PROJECT_KEY, sprint.getId()))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Only active sprints can be finished");
-
-        verify(sprintIssueRepository, never()).findAllBySprintId(sprint.getId());
     }
 
     private Sprint plannedSprint() {
-        final Sprint sprint = Sprint.builder()
+        return Sprint.builder()
                 .id(UUID.randomUUID().toString())
                 .project(project())
                 .projectId(PROJECT_ID)
@@ -283,7 +257,6 @@ class SprintServiceTest {
                 .goal("Deliver feature")
                 .state(SprintState.PLANNED)
                 .build();
-        return sprint;
     }
 
     private Project project() {
@@ -294,53 +267,6 @@ class SprintServiceTest {
                 .lastName("User")
                 .passwordHash("hash")
                 .build();
-        return Project.builder()
-                .id(PROJECT_ID)
-                .key(PROJECT_KEY)
-                .name("Xira")
-                .owner(owner)
-                .build();
-    }
-
-    private SprintIssue sprintIssue(final String sprintId, final WorkflowStatus workflowStatus) {
-        final Issue issue = Issue.builder()
-                .id(UUID.randomUUID().toString())
-                .project(project())
-                .projectId(PROJECT_ID)
-                .seqNo(1)
-                .key("XIRA-1")
-                .issueType(IssueType.STORY)
-                .status(workflowStatus)
-                .statusId(workflowStatus.getId())
-                .priority(IssuePriority.MEDIUM)
-                .reporter(project().getOwner())
-                .reporterId("owner-id")
-                .title("Issue")
-                .description("Description")
-                .build();
-        return SprintIssue.builder()
-                .sprintId(sprintId)
-                .issueId(issue.getId())
-                .issue(issue)
-                .build();
-    }
-
-    private WorkflowStatus doneWorkflowStatus() {
-        return workflowStatus("done-status", WorkflowStatusCategory.DONE);
-    }
-
-    private WorkflowStatus todoWorkflowStatus() {
-        return workflowStatus("todo-status", WorkflowStatusCategory.TODO);
-    }
-
-    private WorkflowStatus workflowStatus(final String id, final WorkflowStatusCategory category) {
-        return WorkflowStatus.builder()
-                .id(id)
-                .workflow(Workflow.builder().id("workflow-id").project(project()).build())
-                .workflowId("workflow-id")
-                .name("Status")
-                .category(category)
-                .statusOrder(1)
-                .build();
+        return Project.builder().id(PROJECT_ID).key(PROJECT_KEY).name("Xira").owner(owner).build();
     }
 }
