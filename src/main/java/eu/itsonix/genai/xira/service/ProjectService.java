@@ -13,7 +13,10 @@ import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
+import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
+import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
+import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 @Service
@@ -24,6 +27,7 @@ public class ProjectService {
     private final ProjectMemberRepository projectMemberRepository;
     private final WorkflowService workflowService;
     private final AuthService authService;
+    private final XiraUserRepository xiraUserRepository;
 
     @Transactional
     public void createProject(final CreateProjectRequest createProjectRequest) {
@@ -67,5 +71,48 @@ public class ProjectService {
         }
 
         projectRepository.save(project);
+    }
+
+    @Transactional
+    public void addProjectMember(final String projectKey, final AddProjectMemberRequest addProjectMemberRequest) {
+        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+
+        final String userId = addProjectMemberRequest.getUserId().toString();
+        final XiraUser user = xiraUserRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (projectMemberRepository.existsByProjectIdAndUserId(project.getId(), userId)) {
+            throw new IllegalStateException("User is already a project member");
+        }
+
+        final ProjectRole projectRole = mapRole(addProjectMemberRequest.getRole());
+
+        projectMemberRepository.save(ProjectMember.builder()
+                .projectId(project.getId())
+                .userId(userId)
+                .project(project)
+                .xiraUser(user)
+                .role(projectRole)
+                .build());
+    }
+
+    @Transactional
+    public void removeProjectMember(final String projectKey, final String userId) {
+        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+
+        final ProjectMember projectMember = projectMemberRepository
+                .findByProjectIdAndUserId(project.getId(), userId)
+                .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
+
+        projectMemberRepository.delete(projectMember);
+    }
+
+    private ProjectRole mapRole(final ProjectMemberRole role) {
+        if (role == null) {
+            throw new IllegalArgumentException("Role must not be null");
+        }
+        return ProjectRole.valueOf(role.getValue());
     }
 }

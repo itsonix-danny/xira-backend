@@ -83,7 +83,7 @@ public class AuthService {
                 .map(Authentication::getName)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
-        return projectMemberRepository.existsByProject_KeyAndXiraUser_EmailAndRole(projectKey, email,
-                ProjectRole.ADMIN);
+        return projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCaseAndRole(projectKey,
+                email, ProjectRole.ADMIN);
     }
 }
