@@ -3,8 +3,6 @@ package eu.itsonix.genai.xira.web;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
-import eu.itsonix.genai.xira.web.model.LoginRequest;
-import eu.itsonix.genai.xira.web.model.RegisterRequest;
 import io.restassured.http.ContentType;
 
 import static io.restassured.RestAssured.given;
@@ -17,8 +15,8 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenValidEmail_whenGetUsers_thenReturnsUserDetails() {
-        registerUser();
-        final String token = login();
+        registerUser(EMAIL, PASSWORD, "John", "Doe");
+        final String token = login(EMAIL, PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -34,8 +32,8 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenNonExistentEmail_whenGetUsers_thenReturnsNotFound() {
-        registerUser();
-        final String token = login();
+        registerUser(EMAIL, PASSWORD, "John", "Doe");
+        final String token = login(EMAIL, PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -48,18 +46,13 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenUnauthenticated_whenGetUsers_thenReturnsUnauthorized() {
-        given().contentType(ContentType.JSON)
-                .queryParam("email", EMAIL)
-                .when()
-                .get("/users")
-                .then()
-                .statusCode(401);
+        given().contentType(ContentType.JSON).queryParam("email", EMAIL).when().get("/users").then().statusCode(401);
     }
 
     @Test
     void givenEmailWithDifferentCase_whenGetUsers_thenReturnsUserDetails() {
-        registerUser();
-        final String token = login();
+        registerUser(EMAIL, PASSWORD, "John", "Doe");
+        final String token = login(EMAIL, PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -73,27 +66,31 @@ class UserControllerIntegrationTest extends BaseIntegrationTest {
                 .body("lastName", equalTo("Doe"));
     }
 
-    private void registerUser() {
+    @Test
+    void givenMissingEmailParam_whenGetUsers_thenReturnsBadRequest() {
+        registerUser(EMAIL, PASSWORD, "John", "Doe");
+        final String token = login(EMAIL, PASSWORD);
+
         given().contentType(ContentType.JSON)
-                .body(new RegisterRequest().email(EMAIL)
-                        .password(PASSWORD)
-                        .firstName("John")
-                        .lastName("Doe"))
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
                 .when()
-                .post("/auth/register")
+                .get("/users")
                 .then()
-                .statusCode(201);
+                .statusCode(400);
     }
 
-    private String login() {
-        return given().contentType(ContentType.JSON)
-                .body(new LoginRequest().email(EMAIL).password(PASSWORD))
+    @Test
+    void givenInvalidEmailFormat_whenGetUsers_thenReturnsBadRequest() {
+        registerUser(EMAIL, PASSWORD, "John", "Doe");
+        final String token = login(EMAIL, PASSWORD);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("email", "invalid")
                 .when()
-                .post("/auth/login")
+                .get("/users")
                 .then()
-                .statusCode(200)
-                .extract()
-                .jsonPath()
-                .getString("access_token");
+                .statusCode(400);
     }
+
 }

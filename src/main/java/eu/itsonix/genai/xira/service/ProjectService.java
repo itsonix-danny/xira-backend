@@ -102,6 +102,10 @@ public class ProjectService {
         final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
                 .orElseThrow(() -> new EntityNotFoundException("Project not found"));
 
+        if (project.getOwnerId().equals(userId)) {
+            throw new IllegalStateException("Project owner cannot be removed from the project");
+        }
+
         final ProjectMember projectMember = projectMemberRepository.findByProjectIdAndUserId(project.getId(), userId)
                 .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
 

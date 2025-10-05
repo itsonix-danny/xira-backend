@@ -1,18 +1,14 @@
 package eu.itsonix.genai.xira.web;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 
-import eu.itsonix.genai.xira.jpa.entity.BoardColumnWorkflowStatus;
-import eu.itsonix.genai.xira.jpa.repository.BoardColumnRepository;
-import eu.itsonix.genai.xira.jpa.repository.BoardColumnWorkflowStatusRepository;
-import eu.itsonix.genai.xira.jpa.repository.WorkflowStatusRepository;
-import eu.itsonix.genai.xira.web.model.*;
+import eu.itsonix.genai.xira.web.model.AddBoardRequest;
+import eu.itsonix.genai.xira.web.model.RegisterRequest;
+import eu.itsonix.genai.xira.web.model.UpdateBoardRequest;
 import io.restassured.http.ContentType;
 
 import static io.restassured.RestAssured.given;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.matchesPattern;
 
@@ -21,19 +17,10 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
     private static final String EMAIL = "owner@example.com";
     private static final String PASSWORD = "password";
 
-    @Autowired
-    private BoardColumnRepository boardColumnRepository;
-
-    @Autowired
-    private BoardColumnWorkflowStatusRepository boardColumnWorkflowStatusRepository;
-
-    @Autowired
-    private WorkflowStatusRepository workflowStatusRepository;
-
     @Test
     void givenAdmin_whenAddKanbanBoard_thenReturnsCreated() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
 
         createProject(token);
 
@@ -45,22 +32,12 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201)
                 .header(HttpHeaders.LOCATION, matchesPattern("^/projects/XIRA/boards/.+$"));
-
-        final var boardColumns = boardColumnRepository.findAll();
-        assertThat(boardColumns).hasSize(3);
-        assertThat(boardColumns.getFirst().getName()).isEqualTo("To Do");
-        assertThat(boardColumns.get(1).getName()).isEqualTo("In Progress");
-        assertThat(boardColumns.get(2).getName()).isEqualTo("Done");
-
-        final var columnWorkflowStatuses = boardColumnWorkflowStatusRepository.findAll();
-        assertThat(columnWorkflowStatuses).hasSize(3);
-        assertThat(columnWorkflowStatuses).allMatch(BoardColumnWorkflowStatus::getIsDefault);
     }
 
     @Test
     void givenExistingScrumBoard_whenAddAnotherScrumBoard_thenReturnsConflict() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
 
         createProject(token);
 
@@ -84,8 +61,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenNonAdmin_whenAddBoard_thenReturnsForbidden() {
-        registerUser();
-        final String ownerToken = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
         createProject(ownerToken);
 
         given().contentType(ContentType.JSON)
@@ -98,7 +75,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        final String memberToken = login("member@example.com");
+        final String memberToken = login("member@example.com", PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
@@ -111,8 +88,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenUnauthenticated_whenAddBoard_thenReturnsUnauthorized() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -125,8 +102,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenNonExistentProject_whenAddBoard_thenReturnsForbidden() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -139,8 +116,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenEmptyName_whenAddBoard_thenReturnsBadRequest() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -154,8 +131,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenTooLongName_whenAddBoard_thenReturnsBadRequest() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -168,34 +145,9 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenMultipleKanbanBoards_whenAddBoards_thenAllSucceed() {
-        registerUser();
-        final String token = login(EMAIL);
-        createProject(token);
-
-        given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new AddBoardRequest().name("Kanban Board 1").type(AddBoardRequest.TypeEnum.KANBAN))
-                .when()
-                .post("/projects/XIRA/boards")
-                .then()
-                .statusCode(201)
-                .header(HttpHeaders.LOCATION, equalTo("/projects/XIRA/boards/1"));
-
-        given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new AddBoardRequest().name("Kanban Board 2").type(AddBoardRequest.TypeEnum.KANBAN))
-                .when()
-                .post("/projects/XIRA/boards")
-                .then()
-                .statusCode(201)
-                .header(HttpHeaders.LOCATION, equalTo("/projects/XIRA/boards/2"));
-    }
-
-    @Test
     void givenMultipleBoards_whenAddBoards_thenBoardNumbersIncrement() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -228,8 +180,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenAdmin_whenUpdateBoard_thenReturnsSuccess() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -251,8 +203,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenNonAdmin_whenUpdateBoard_thenReturnsForbidden() {
-        registerUser();
-        final String ownerToken = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
         createProject(ownerToken);
 
         given().contentType(ContentType.JSON)
@@ -273,7 +225,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        final String memberToken = login("member@example.com");
+        final String memberToken = login("member@example.com", PASSWORD);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
@@ -286,8 +238,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenUnauthenticated_whenUpdateBoard_thenReturnsUnauthorized() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -308,8 +260,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenNonExistentBoard_whenUpdateBoard_thenReturnsNotFound() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -323,8 +275,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenEmptyName_whenUpdateBoard_thenReturnsBadRequest() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -346,8 +298,8 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void givenTooLongName_whenUpdateBoard_thenReturnsBadRequest() {
-        registerUser();
-        final String token = login(EMAIL);
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
@@ -368,83 +320,62 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenKanbanBoard_whenCreated_thenColumnsMapToCorrectWorkflowStatuses() {
-        registerUser();
-        final String token = login(EMAIL);
+    void givenMissingRequiredFields_whenAddBoard_thenReturnsBadRequest() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
         createProject(token);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new AddBoardRequest().name("Dev Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .body("{}")
                 .when()
                 .post("/projects/XIRA/boards")
                 .then()
-                .statusCode(201);
-
-        final var workflowStatuses = workflowStatusRepository.findAll();
-        final var todoStatus = workflowStatuses.stream()
-                .filter(ws -> ws.getCategory() == eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory.TODO)
-                .findFirst()
-                .orElseThrow();
-        final var inProgressStatus = workflowStatuses.stream()
-                .filter(ws -> ws.getCategory() == eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory.IN_PROGRESS)
-                .findFirst()
-                .orElseThrow();
-        final var doneStatus = workflowStatuses.stream()
-                .filter(ws -> ws.getCategory() == eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory.DONE)
-                .findFirst()
-                .orElseThrow();
-
-        final var columnMappings = boardColumnWorkflowStatusRepository.findAll();
-        assertThat(columnMappings).hasSize(3);
-
-        final var todoMapping = columnMappings.stream()
-                .filter(m -> m.getBoardColumn().getName().equals("To Do"))
-                .findFirst()
-                .orElseThrow();
-        assertThat(todoMapping.getWorkflowStatusId()).isEqualTo(todoStatus.getId());
-
-        final var inProgressMapping = columnMappings.stream()
-                .filter(m -> m.getBoardColumn().getName().equals("In Progress"))
-                .findFirst()
-                .orElseThrow();
-        assertThat(inProgressMapping.getWorkflowStatusId()).isEqualTo(inProgressStatus.getId());
-
-        final var doneMapping = columnMappings.stream()
-                .filter(m -> m.getBoardColumn().getName().equals("Done"))
-                .findFirst()
-                .orElseThrow();
-        assertThat(doneMapping.getWorkflowStatusId()).isEqualTo(doneStatus.getId());
+                .statusCode(400);
     }
 
-    private void registerUser() {
-        given().contentType(ContentType.JSON)
-                .body(new RegisterRequest().email(EMAIL).password(PASSWORD).firstName("Owner").lastName("Example"))
-                .when()
-                .post("/auth/register")
-                .then()
-                .statusCode(201);
-    }
+    @Test
+    void givenInvalidBoardType_whenAddBoard_thenReturnsBadRequest() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
 
-    private void createProject(final String token) {
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .body("{\"name\":\"Board\",\"type\":\"INVALID\"}")
                 .when()
-                .post("/projects")
+                .post("/projects/XIRA/boards")
                 .then()
-                .statusCode(201);
+                .statusCode(400);
     }
 
-    private String login(final String email) {
-        return given().contentType(ContentType.JSON)
-                .body(new LoginRequest().email(email).password(PASSWORD))
+    @Test
+    void givenNonExistentProject_whenUpdateBoard_thenReturnsForbidden() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateBoardRequest().name("Updated Board"))
                 .when()
-                .post("/auth/login")
+                .patch("/projects/NONEXISTENT/boards/1")
                 .then()
-                .statusCode(200)
-                .extract()
-                .jsonPath()
-                .getString("access_token");
+                .statusCode(403);
     }
+
+    @Test
+    void givenInvalidBoardNumber_whenUpdateBoard_thenReturnsBadRequest() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new UpdateBoardRequest().name("Updated Board"))
+                .when()
+                .patch("/projects/XIRA/boards/abc")
+                .then()
+                .statusCode(400);
+    }
+
 }

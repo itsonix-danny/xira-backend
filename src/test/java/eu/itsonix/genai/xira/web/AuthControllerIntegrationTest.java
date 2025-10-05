@@ -106,4 +106,58 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
         given().contentType(ContentType.JSON).body(loginRequest).when().post("/auth/login").then().statusCode(401);
     }
+
+    @Test
+    void givenPasswordTooShort_whenRegister_thenReturnsBadRequest() {
+        final RegisterRequest registerRequest = new RegisterRequest().email("newuser@example.com")
+                .password("short")
+                .firstName("John")
+                .lastName("Doe");
+
+        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+    }
+
+    @Test
+    void givenInvalidEmailFormat_whenRegister_thenReturnsBadRequest() {
+        final RegisterRequest registerRequest = new RegisterRequest().email("notanemail")
+                .password("password123")
+                .firstName("John")
+                .lastName("Doe");
+
+        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+    }
+
+    @Test
+    void givenEmptyFirstName_whenRegister_thenReturnsBadRequest() {
+        final RegisterRequest registerRequest = new RegisterRequest().email("newuser@example.com")
+                .password("password123")
+                .firstName("")
+                .lastName("Doe");
+
+        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+    }
+
+    @Test
+    void givenEmptyLastName_whenRegister_thenReturnsBadRequest() {
+        final RegisterRequest registerRequest = new RegisterRequest().email("newuser@example.com")
+                .password("password123")
+                .firstName("John")
+                .lastName("");
+
+        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+    }
+
+    @Test
+    void givenMissingEmail_whenLogin_thenReturnsBadRequest() {
+        final LoginRequest loginRequest = new LoginRequest().password("password123");
+
+        given().contentType(ContentType.JSON).body(loginRequest).when().post("/auth/login").then().statusCode(400);
+    }
+
+    @Test
+    void givenMissingPassword_whenLogin_thenReturnsBadRequest() {
+        final LoginRequest loginRequest = new LoginRequest().email("user@example.com");
+
+        given().contentType(ContentType.JSON).body(loginRequest).when().post("/auth/login").then().statusCode(400);
+    }
 }
