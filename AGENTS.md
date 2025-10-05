@@ -111,6 +111,8 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 - **Error Handling**: Log errors with context, throw domain-specific exceptions
 - **DTO Mapping**: Consistent static mapping methods in mapping classes under
   `src/main/java/eu/itsonix/genai/xira/mapper` for entity-to-API model conversion
+- **Economical use of variables**: Avoid introducing variables that are only used once. Avoid creating multiple
+  instances of the same entity when saving (e.g., `final Sprint savedSprint = sprintRepository.save(sprint);`)
 
 ## Testing Approach
 

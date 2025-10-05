@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-> ## Project Xira
+## Project Xira
 
 This repository contains the backend code for the project Xira, a Jira-like issue tracker and project management system
 for software development teams.
