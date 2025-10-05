@@ -86,4 +86,12 @@ public class AuthService {
         return projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCaseAndRole(projectKey,
                 email, ProjectRole.ADMIN);
     }
+
+    public boolean isProjectMember(final String projectKey) {
+        final String email = Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
+                .map(Authentication::getName)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+        return projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase(projectKey, email);
+    }
 }

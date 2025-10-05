@@ -48,6 +48,12 @@ abstract class BaseIntegrationTest {
     private BoardRepository boardRepository;
 
     @Autowired
+    private SprintIssueRepository sprintIssueRepository;
+
+    @Autowired
+    private SprintRepository sprintRepository;
+
+    @Autowired
     private ProjectMemberRepository projectMemberRepository;
 
     @Autowired
@@ -61,6 +67,8 @@ abstract class BaseIntegrationTest {
         RestAssured.baseURI = "http://localhost";
         RestAssured.port = port;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        sprintIssueRepository.deleteAll();
+        sprintRepository.deleteAll();
         boardColumnWorkflowStatusRepository.deleteAll();
         boardColumnRepository.deleteAll();
         boardRepository.deleteAll();
