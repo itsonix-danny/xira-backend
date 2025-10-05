@@ -29,7 +29,7 @@ import eu.itsonix.genai.xira.web.model.TokenResponse;
 @RequiredArgsConstructor
 public class AuthService {
 
-    public static final long TOKEN_EXPIRY_TIME_IN_SECONDS = 3600;
+    public static final long TOKEN_EXPIRY_TIME_IN_SECONDS = 7200;
     public static final String ISSUER = "xira";
 
     private final AuthenticationManager authenticationManager;

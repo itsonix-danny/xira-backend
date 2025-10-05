@@ -18,11 +18,7 @@ import eu.itsonix.genai.xira.jpa.entity.XiraUser;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
-import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
-import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
-import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
-import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
-import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
+import eu.itsonix.genai.xira.web.model.*;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -125,16 +121,21 @@ class ProjectServiceTest {
 
     @Test
     void givenValidRequest_whenAddProjectMember_thenSavesMember() {
-        final AddProjectMemberRequest request = new AddProjectMemberRequest().userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .role(ProjectMemberRole.DEVELOPER);
 
         final Project project = Project.builder().id("project-id").key("XIRA").build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
 
-        final XiraUser user = XiraUser.builder().id("550e8400-e29b-41d4-a716-446655440000").email("member@example.com").build();
+        final XiraUser user = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440000")
+                .email("member@example.com")
+                .build();
         when(xiraUserRepository.findById("550e8400-e29b-41d4-a716-446655440000")).thenReturn(Optional.of(user));
-        when(projectMemberRepository.existsByProjectIdAndUserId("project-id", "550e8400-e29b-41d4-a716-446655440000")).thenReturn(false);
+        when(projectMemberRepository.existsByProjectIdAndUserId("project-id", "550e8400-e29b-41d4-a716-446655440000"))
+                .thenReturn(false);
 
         projectService.addProjectMember("XIRA", request);
 
@@ -143,15 +144,17 @@ class ProjectServiceTest {
 
     @Test
     void givenExistingMember_whenAddProjectMember_thenThrowsIllegalState() {
-        final AddProjectMemberRequest request = new AddProjectMemberRequest().userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .role(ProjectMemberRole.ADMIN);
 
         final Project project = Project.builder().id("project-id").key("XIRA").build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
-        when(xiraUserRepository.findById("550e8400-e29b-41d4-a716-446655440000"))
-                .thenReturn(Optional.of(XiraUser.builder().id("550e8400-e29b-41d4-a716-446655440000").email("member@example.com").build()));
-        when(projectMemberRepository.existsByProjectIdAndUserId("project-id", "550e8400-e29b-41d4-a716-446655440000")).thenReturn(true);
+        when(xiraUserRepository.findById("550e8400-e29b-41d4-a716-446655440000")).thenReturn(Optional
+                .of(XiraUser.builder().id("550e8400-e29b-41d4-a716-446655440000").email("member@example.com").build()));
+        when(projectMemberRepository.existsByProjectIdAndUserId("project-id", "550e8400-e29b-41d4-a716-446655440000"))
+                .thenReturn(true);
 
         assertThatThrownBy(() -> projectService.addProjectMember("XIRA", request))
                 .isInstanceOf(IllegalStateException.class)
@@ -160,7 +163,8 @@ class ProjectServiceTest {
 
     @Test
     void givenNonExistingProject_whenAddProjectMember_thenThrowsEntityNotFound() {
-        final AddProjectMemberRequest request = new AddProjectMemberRequest().userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440000"))
                 .role(ProjectMemberRole.DEVELOPER);
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.empty());
@@ -172,7 +176,8 @@ class ProjectServiceTest {
 
     @Test
     void givenNonExistingUser_whenAddProjectMember_thenThrowsEntityNotFound() {
-        final AddProjectMemberRequest request = new AddProjectMemberRequest().userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
+        final AddProjectMemberRequest request = new AddProjectMemberRequest()
+                .userId(UUID.fromString("550e8400-e29b-41d4-a716-446655440001"))
                 .role(ProjectMemberRole.DEVELOPER);
 
         final Project project = Project.builder().id("project-id").key("XIRA").build();
@@ -227,7 +232,7 @@ class ProjectServiceTest {
 
     @Test
     void givenValidRequest_whenUpdateProjectMemberRole_thenUpdatesRole() {
-        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").ownerId("owner-id").build();
         final ProjectMember member = ProjectMember.builder()
                 .projectId("project-id")
                 .userId("user-id")
@@ -235,8 +240,7 @@ class ProjectServiceTest {
                 .build();
 
         when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
-        when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id"))
-                .thenReturn(Optional.of(member));
+        when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id")).thenReturn(Optional.of(member));
 
         final UpdateProjectMemberRoleRequest request = new UpdateProjectMemberRoleRequest()
                 .role(ProjectMemberRole.ADMIN);

@@ -313,21 +313,21 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateProjectMemberRoleRequest'
-        responses:
-          '200':
-            description: Project member role updated successfully
-          '400':
-            $ref: '#/components/responses/Problem'
-          '401':
-            $ref: '#/components/responses/Problem'
-          '403':
-            $ref: '#/components/responses/Problem'
-          '404':
-            $ref: '#/components/responses/Problem'
-          '409':
-            $ref: '#/components/responses/Problem'
-          '500':
-            $ref: '#/components/responses/Problem'
+      responses:
+        '200':
+          description: Project member role updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     delete:
       tags: [ Projects ]
       operationId: removeProjectMember
