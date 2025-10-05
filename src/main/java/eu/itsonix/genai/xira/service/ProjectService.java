@@ -1,5 +1,7 @@
 package eu.itsonix.genai.xira.service;
 
+import java.util.Optional;
+
 import jakarta.persistence.EntityNotFoundException;
 
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
+import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 @Service
@@ -109,10 +112,37 @@ public class ProjectService {
         projectMemberRepository.delete(projectMember);
     }
 
+    @Transactional
+    public void updateProjectMemberRole(final String projectKey, final String userId,
+            final UpdateProjectMemberRoleRequest updateProjectMemberRoleRequest) {
+        final Project project = projectRepository.findByKeyIgnoreCase(projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Project not found"));
+
+        final ProjectMember projectMember = projectMemberRepository
+                .findByProjectIdAndUserId(project.getId(), userId)
+                .orElseThrow(() -> new EntityNotFoundException("Project member not found"));
+
+        final ProjectRole newRole = mapRole(updateProjectMemberRoleRequest.getRole());
+
+        if (isProjectOwner(project, userId) && newRole != ProjectRole.ADMIN) {
+            throw new IllegalStateException("Project owner must remain an admin");
+        }
+
+        projectMember.setRole(newRole);
+        projectMemberRepository.save(projectMember);
+    }
+
     private ProjectRole mapRole(final ProjectMemberRole role) {
         if (role == null) {
             throw new IllegalArgumentException("Role must not be null");
         }
         return ProjectRole.valueOf(role.getValue());
+    }
+
+    private boolean isProjectOwner(final Project project, final String userId) {
+        return Optional.ofNullable(project.getOwnerId())
+                .or(() -> Optional.ofNullable(project.getOwner()).map(XiraUser::getId))
+                .map(userId::equals)
+                .orElse(false);
     }
 }

@@ -528,6 +528,117 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void givenAdmin_whenUpdateProjectMemberRole_thenMemberCanUpdateProject() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String developerEmail = "developer.role@example.com";
+        registerUser(developerEmail, "Role", "Developer");
+        final String developerToken = login(developerEmail);
+
+        final String developerUserId = getUserIdByEmail(ownerToken, developerEmail);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(developerUserId)).role(ProjectMemberRole.DEVELOPER))
+                .when()
+                .post("/projects/XIRA/members")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
+                .body(new UpdateProjectRequest().description("Attempt"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(403);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new UpdateProjectMemberRoleRequest().role(ProjectMemberRole.ADMIN))
+                .when()
+                .patch("/projects/XIRA/members/{userId}", developerUserId)
+                .then()
+                .statusCode(200);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
+                .body(new UpdateProjectRequest().name("Updated After Promotion"))
+                .when()
+                .patch("/projects/XIRA")
+                .then()
+                .statusCode(200);
+    }
+
+    @Test
+    void givenOwner_whenUpdateOwnRoleToDeveloper_thenReturnsConflict() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String ownerUserId = getUserIdByEmail(ownerToken, EMAIL);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new UpdateProjectMemberRoleRequest().role(ProjectMemberRole.DEVELOPER))
+                .when()
+                .patch("/projects/XIRA/members/{userId}", ownerUserId)
+                .then()
+                .statusCode(409);
+    }
+
+    @Test
+    void givenNonAdmin_whenUpdateProjectMemberRole_thenReturnsForbidden() {
+        registerUser();
+        final String ownerToken = login();
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .when()
+                .post("/projects")
+                .then()
+                .statusCode(201);
+
+        final String developerEmail = "developer.update.role@example.com";
+        registerUser(developerEmail, "Update", "Developer");
+        final String developerUserId = getUserIdByEmail(ownerToken, developerEmail);
+        final String developerToken = login(developerEmail);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddProjectMemberRequest().userId(UUID.fromString(developerUserId)).role(ProjectMemberRole.DEVELOPER))
+                .when()
+                .post("/projects/XIRA/members")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
+                .body(new UpdateProjectMemberRoleRequest().role(ProjectMemberRole.ADMIN))
+                .when()
+                .patch("/projects/XIRA/members/{userId}", developerUserId)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
     void givenNonAdmin_whenAddProjectMember_thenReturnsForbidden() {
         registerUser();
         final String ownerToken = login();

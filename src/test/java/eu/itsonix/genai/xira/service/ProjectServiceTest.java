@@ -21,6 +21,7 @@ import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
+import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -220,6 +221,80 @@ class ProjectServiceTest {
         when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> projectService.removeProjectMember("XIRA", "user-id"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project member not found");
+    }
+
+    @Test
+    void givenValidRequest_whenUpdateProjectMemberRole_thenUpdatesRole() {
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final ProjectMember member = ProjectMember.builder()
+                .projectId("project-id")
+                .userId("user-id")
+                .role(ProjectRole.DEVELOPER)
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id"))
+                .thenReturn(Optional.of(member));
+
+        final UpdateProjectMemberRoleRequest request = new UpdateProjectMemberRoleRequest()
+                .role(ProjectMemberRole.ADMIN);
+
+        projectService.updateProjectMemberRole("XIRA", "user-id", request);
+
+        verify(projectMemberRepository).save(member);
+    }
+
+    @Test
+    void givenOwner_whenUpdateProjectMemberRoleToDeveloper_thenThrowsIllegalState() {
+        final XiraUser owner = XiraUser.builder().id("owner-id").build();
+        final Project project = Project.builder()
+                .id("project-id")
+                .key("XIRA")
+                .owner(owner)
+                .ownerId(owner.getId())
+                .build();
+        final ProjectMember member = ProjectMember.builder()
+                .projectId("project-id")
+                .userId("owner-id")
+                .role(ProjectRole.ADMIN)
+                .build();
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(projectMemberRepository.findByProjectIdAndUserId("project-id", "owner-id"))
+                .thenReturn(Optional.of(member));
+
+        final UpdateProjectMemberRoleRequest request = new UpdateProjectMemberRoleRequest()
+                .role(ProjectMemberRole.DEVELOPER);
+
+        assertThatThrownBy(() -> projectService.updateProjectMemberRole("XIRA", "owner-id", request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Project owner must remain an admin");
+    }
+
+    @Test
+    void givenNonExistingProject_whenUpdateProjectMemberRole_thenThrowsEntityNotFound() {
+        final UpdateProjectMemberRoleRequest request = new UpdateProjectMemberRoleRequest()
+                .role(ProjectMemberRole.DEVELOPER);
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.updateProjectMemberRole("XIRA", "user-id", request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Project not found");
+    }
+
+    @Test
+    void givenNonExistingMember_whenUpdateProjectMemberRole_thenThrowsEntityNotFound() {
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final UpdateProjectMemberRoleRequest request = new UpdateProjectMemberRoleRequest()
+                .role(ProjectMemberRole.ADMIN);
+
+        when(projectRepository.findByKeyIgnoreCase("XIRA")).thenReturn(Optional.of(project));
+        when(projectMemberRepository.findByProjectIdAndUserId("project-id", "user-id")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> projectService.updateProjectMemberRole("XIRA", "user-id", request))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Project member not found");
     }
