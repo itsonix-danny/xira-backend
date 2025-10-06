@@ -17,6 +17,7 @@ import eu.itsonix.genai.xira.web.api.ProjectsApi;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
+import eu.itsonix.genai.xira.web.model.ProjectMemberResponse;
 import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 import eu.itsonix.genai.xira.web.model.WorkflowStatusResponse;
@@ -54,6 +55,13 @@ public class ProjectController implements ProjectsApi {
     public ResponseEntity<Void> updateProject(final String key, final UpdateProjectRequest updateProjectRequest) {
         projectService.updateProject(key, updateProjectRequest);
         return ResponseEntity.ok().build();
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<List<ProjectMemberResponse>> getProjectMembers(final String key) {
+        final List<ProjectMemberResponse> members = projectService.getProjectMembers(key);
+        return ResponseEntity.ok(members);
     }
 
     @Override

@@ -509,6 +509,37 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects/{key}/members:
+    get:
+      tags: [ Projects ]
+      operationId: getProjectMembers
+      summary: Get all members of a project
+      description: 'Returns all members of the specified project with their roles and ownership status. Only accessible by project members.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project members retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProjectMemberResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     post:
       tags: [ Projects ]
       operationId: addProjectMember
@@ -1299,6 +1330,31 @@ components:
         lastName:
           type: string
           description: User last name
+
+    ProjectMemberResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, email, firstName, lastName, role, isOwner ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user ID
+        email:
+          type: string
+          format: email
+          description: User email address
+        firstName:
+          type: string
+          description: User first name
+        lastName:
+          type: string
+          description: User last name
+        role:
+          $ref: '#/components/schemas/ProjectMemberRole'
+        isOwner:
+          type: boolean
+          description: Whether the user is the owner of the project
 
     WorkflowStatusResponse:
       type: object

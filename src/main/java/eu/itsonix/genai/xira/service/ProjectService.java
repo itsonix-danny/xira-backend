@@ -151,4 +151,12 @@ public class ProjectService {
 
         return ProjectMapper.toProjectDetailsResponse(projectMember);
     }
+
+    @Transactional(readOnly = true)
+    public List<ProjectMemberResponse> getProjectMembers(final String projectKey) {
+        return projectMemberRepository.findAllByProject_KeyIgnoreCase(projectKey)
+                .stream()
+                .map(ProjectMapper::toProjectMemberResponse)
+                .toList();
+    }
 }

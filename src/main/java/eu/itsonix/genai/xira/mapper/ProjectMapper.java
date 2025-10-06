@@ -1,12 +1,15 @@
 package eu.itsonix.genai.xira.mapper;
 
 import java.util.List;
+import java.util.UUID;
 
 import eu.itsonix.genai.xira.jpa.entity.Project;
 import eu.itsonix.genai.xira.jpa.entity.ProjectMember;
 import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
+import eu.itsonix.genai.xira.jpa.entity.XiraUser;
 import eu.itsonix.genai.xira.web.model.ProjectBoardResponse;
 import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
+import eu.itsonix.genai.xira.web.model.ProjectMemberResponse;
 import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
 
 public final class ProjectMapper {
@@ -40,5 +43,22 @@ public final class ProjectMapper {
             return null;
         }
         return ProjectRole.valueOf(role.getValue());
+    }
+
+    public static ProjectMemberResponse toProjectMemberResponse(final ProjectMember projectMember) {
+        final XiraUser user = projectMember.getXiraUser();
+        return new ProjectMemberResponse().id(UUID.fromString(user.getId()))
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .role(toProjectMemberRole(projectMember.getRole()))
+                .isOwner(isOwner(projectMember));
+    }
+
+    private static ProjectMemberRole toProjectMemberRole(final ProjectRole role) {
+        if (role == null) {
+            return null;
+        }
+        return ProjectMemberRole.fromValue(role.name());
     }
 }

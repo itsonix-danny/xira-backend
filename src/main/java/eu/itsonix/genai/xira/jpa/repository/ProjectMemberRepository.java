@@ -30,4 +30,7 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Pr
 
     @EntityGraph(attributePaths = { "project", "project.owner", "project.boards" })
     Optional<ProjectMember> findByProject_KeyIgnoreCaseAndUserId(final String projectKey, final String userId);
+
+    @EntityGraph(attributePaths = { "project", "xiraUser" })
+    List<ProjectMember> findAllByProject_KeyIgnoreCase(final String projectKey);
 }

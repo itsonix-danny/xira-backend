@@ -719,6 +719,89 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
+    void givenProjectMember_whenGetProjectMembers_thenReturnsAllMembers() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+
+        createProject(ownerToken);
+
+        final String member1Email = "member1@example.com";
+        registerUser(member1Email, PASSWORD, "Member", "One");
+        final String member1UserId = getUserIdByEmail(ownerToken, member1Email);
+
+        final String member2Email = "member2@example.com";
+        registerUser(member2Email, PASSWORD, "Member", "Two");
+        final String member2UserId = getUserIdByEmail(ownerToken, member2Email);
+
+        addProjectMember(ownerToken, member1UserId, ProjectMemberRole.DEVELOPER);
+        addProjectMember(ownerToken, member2UserId, ProjectMemberRole.ADMIN);
+
+        final var members = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .when()
+                .get("/projects/XIRA/members")
+                .then()
+                .statusCode(200)
+                .extract()
+                .jsonPath()
+                .getList(".", ProjectMemberResponse.class);
+
+        assertThat(members).hasSize(3);
+        assertThat(members).extracting("email").containsExactlyInAnyOrder(EMAIL, member1Email, member2Email);
+        assertThat(members).extracting("firstName").containsExactlyInAnyOrder("Owner", "Member", "Member");
+        assertThat(members).extracting("lastName").containsExactlyInAnyOrder("Example", "One", "Two");
+
+        final var owner = members.stream().filter(m -> m.getEmail().equals(EMAIL)).findFirst().orElseThrow();
+        assertThat(owner.getRole()).isEqualTo(ProjectMemberRole.ADMIN);
+        assertThat(owner.getIsOwner()).isTrue();
+
+        final var member1 = members.stream().filter(m -> m.getEmail().equals(member1Email)).findFirst().orElseThrow();
+        assertThat(member1.getRole()).isEqualTo(ProjectMemberRole.DEVELOPER);
+        assertThat(member1.getIsOwner()).isFalse();
+
+        final var member2 = members.stream().filter(m -> m.getEmail().equals(member2Email)).findFirst().orElseThrow();
+        assertThat(member2.getRole()).isEqualTo(ProjectMemberRole.ADMIN);
+        assertThat(member2.getIsOwner()).isFalse();
+    }
+
+    @Test
+    void givenNonMember_whenGetProjectMembers_thenReturnsForbidden() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+
+        createProject(ownerToken);
+
+        final String nonMemberEmail = "nonmember@example.com";
+        registerUser(nonMemberEmail, PASSWORD, "Non", "Member");
+        final String nonMemberToken = login(nonMemberEmail, PASSWORD);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", nonMemberToken))
+                .when()
+                .get("/projects/XIRA/members")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetProjectMembers_thenReturnsUnauthorized() {
+        given().contentType(ContentType.JSON).when().get("/projects/XIRA/members").then().statusCode(401);
+    }
+
+    @Test
+    void givenNonExistentProject_whenGetProjectMembers_thenReturnsForbidden() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .when()
+                .get("/projects/NONEXISTENT/members")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
     void givenAuthenticatedUser_whenGetProjects_thenReturnsUserProjects() {
         registerUser(EMAIL, PASSWORD, "Owner", "Example");
         final String ownerToken = login(EMAIL, PASSWORD);
