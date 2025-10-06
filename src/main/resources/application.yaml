@@ -20,7 +20,7 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} | xira | %logger{30} | %-5level | %msg%n%throwable"
 server:
-  port: 8080
+  port: 8040
 management:
   endpoints:
     web:
