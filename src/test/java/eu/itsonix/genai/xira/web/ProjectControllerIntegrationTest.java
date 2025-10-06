@@ -747,12 +747,13 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getList(".", ProjectSummaryResponse.class);
+                .getList(".", ProjectDetailsResponse.class);
 
         assertThat(projects).hasSize(2);
         assertThat(projects).extracting("key").containsExactlyInAnyOrder("PROJA", "PROJB");
         assertThat(projects).extracting("isOwner").containsOnly(true);
         assertThat(projects).extracting("isAdmin").containsOnly(true);
+        assertThat(projects).allSatisfy(project -> assertThat(project.getBoards()).isNotNull());
     }
 
     @Test
@@ -799,7 +800,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getList(".", ProjectSummaryResponse.class);
+                .getList(".", ProjectDetailsResponse.class);
 
         assertThat(memberProjects).hasSize(2);
         assertThat(memberProjects).extracting("key").containsExactlyInAnyOrder("OWNED", "OTHER");
@@ -810,6 +811,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .orElseThrow();
         assertThat(ownedProject.getIsOwner()).isFalse();
         assertThat(ownedProject.getIsAdmin()).isFalse();
+        assertThat(ownedProject.getBoards()).isNotNull();
 
         final var otherProject = memberProjects.stream()
                 .filter(p -> p.getKey().equals("OTHER"))
@@ -817,6 +819,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .orElseThrow();
         assertThat(otherProject.getIsOwner()).isTrue();
         assertThat(otherProject.getIsAdmin()).isTrue();
+        assertThat(otherProject.getBoards()).isNotNull();
     }
 
     @Test
@@ -1166,7 +1169,7 @@ class ProjectControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getList(".", ProjectSummaryResponse.class);
+                .getList(".", ProjectDetailsResponse.class);
 
         assertThat(projects).isEmpty();
     }

@@ -132,12 +132,12 @@ public class ProjectService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProjectSummaryResponse> getProjectsForAuthenticatedUser() {
+    public List<ProjectDetailsResponse> getProjectsForAuthenticatedUser() {
         final XiraUser user = authService.getAuthenticatedUser();
 
         return projectMemberRepository.findAllByUserId(user.getId())
                 .stream()
-                .map(ProjectMapper::toProjectSummaryResponse)
+                .map(ProjectMapper::toProjectDetailsResponse)
                 .toList();
     }
 

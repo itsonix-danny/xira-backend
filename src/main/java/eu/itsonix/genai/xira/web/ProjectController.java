@@ -17,7 +17,6 @@ import eu.itsonix.genai.xira.web.api.ProjectsApi;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
 import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
-import eu.itsonix.genai.xira.web.model.ProjectSummaryResponse;
 import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
 import eu.itsonix.genai.xira.web.model.WorkflowStatusResponse;
@@ -31,8 +30,8 @@ public class ProjectController implements ProjectsApi {
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<List<ProjectSummaryResponse>> getProjects() {
-        final List<ProjectSummaryResponse> projects = projectService.getProjectsForAuthenticatedUser();
+    public ResponseEntity<List<ProjectDetailsResponse>> getProjects() {
+        final List<ProjectDetailsResponse> projects = projectService.getProjectsForAuthenticatedUser();
         return ResponseEntity.ok(projects);
     }
 

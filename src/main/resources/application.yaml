@@ -8,7 +8,7 @@ spring:
     password: xira
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         jdbc:

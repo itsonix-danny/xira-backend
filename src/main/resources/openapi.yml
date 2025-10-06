@@ -115,7 +115,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/ProjectSummaryResponse'
+                  $ref: '#/components/schemas/ProjectDetailsResponse'
         '401':
           $ref: '#/components/responses/Problem'
         '500':
@@ -1022,10 +1022,10 @@ components:
           description: Board type
           enum: [ SCRUM, KANBAN ]
 
-    ProjectSummaryResponse:
+    ProjectDetailsResponse:
       type: object
       additionalProperties: false
-      required: [ key, name, isOwner, isAdmin ]
+      required: [ key, name, isOwner, isAdmin, boards ]
       properties:
         key:
           type: string
@@ -1043,17 +1043,10 @@ components:
         isAdmin:
           type: boolean
           description: Whether the authenticated user is an admin of the project
-
-    ProjectDetailsResponse:
-      allOf:
-        - $ref: '#/components/schemas/ProjectSummaryResponse'
-        - type: object
-          required: [ boards ]
-          properties:
-            boards:
-              type: array
-              items:
-                $ref: '#/components/schemas/ProjectBoardResponse'
+        boards:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectBoardResponse'
 
     Problem:
       type: object
