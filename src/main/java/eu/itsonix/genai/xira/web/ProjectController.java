@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import lombok.RequiredArgsConstructor;
 
 import eu.itsonix.genai.xira.service.ProjectService;
+import eu.itsonix.genai.xira.service.WorkflowService;
 import eu.itsonix.genai.xira.web.api.ProjectsApi;
 import eu.itsonix.genai.xira.web.model.AddProjectMemberRequest;
 import eu.itsonix.genai.xira.web.model.CreateProjectRequest;
@@ -19,12 +20,14 @@ import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
 import eu.itsonix.genai.xira.web.model.ProjectSummaryResponse;
 import eu.itsonix.genai.xira.web.model.UpdateProjectMemberRoleRequest;
 import eu.itsonix.genai.xira.web.model.UpdateProjectRequest;
+import eu.itsonix.genai.xira.web.model.WorkflowStatusResponse;
 
 @RestController
 @RequiredArgsConstructor
 public class ProjectController implements ProjectsApi {
 
     private final ProjectService projectService;
+    private final WorkflowService workflowService;
 
     @Override
     @PreAuthorize("isAuthenticated()")
@@ -75,5 +78,12 @@ public class ProjectController implements ProjectsApi {
     public ResponseEntity<Void> removeProjectMember(final String key, final UUID userId) {
         projectService.removeProjectMember(key, userId.toString());
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<List<WorkflowStatusResponse>> getWorkflowStatuses(final String key) {
+        final List<WorkflowStatusResponse> statuses = workflowService.getWorkflowStatuses(key);
+        return ResponseEntity.ok(statuses);
     }
 }

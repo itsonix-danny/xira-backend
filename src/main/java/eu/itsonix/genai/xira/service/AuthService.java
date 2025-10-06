@@ -17,8 +17,10 @@ import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 
+import eu.itsonix.genai.xira.jpa.entity.IssueComment;
 import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
+import eu.itsonix.genai.xira.jpa.repository.IssueCommentRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.LoginRequest;
@@ -36,6 +38,7 @@ public class AuthService {
     private final JwtEncoder jwtEncoder;
     private final XiraUserRepository xiraUserRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final IssueCommentRepository issueCommentRepository;
     private final PasswordEncoder passwordEncoder;
 
     public TokenResponse login(final LoginRequest loginRequest) {
@@ -93,5 +96,14 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
 
         return projectMemberRepository.existsByProject_KeyIgnoreCaseAndXiraUser_EmailIgnoreCase(projectKey, email);
+    }
+
+    public boolean isCommentAuthor(final String commentId) {
+        final String authenticatedUserId = getAuthenticatedUser().getId();
+        return issueCommentRepository.findById(commentId)
+                .map(IssueComment::getAuthor)
+                .map(XiraUser::getId)
+                .map(authorId -> authorId.equals(authenticatedUserId))
+                .orElse(false);
     }
 }

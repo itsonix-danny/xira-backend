@@ -42,7 +42,7 @@ public class SprintService {
     }
 
     @Transactional
-    public SprintResponse updateSprint(final String projectKey, final String sprintId,
+    public void updateSprint(final String projectKey, final String sprintId,
             final UpdateSprintRequest updateSprintRequest) {
         final Sprint sprint = getSprintForProject(projectKey, sprintId);
 
@@ -58,7 +58,7 @@ public class SprintService {
             sprint.setGoal(updateSprintRequest.getGoal());
         }
 
-        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
+        sprintRepository.save(sprint);
     }
 
     @Transactional

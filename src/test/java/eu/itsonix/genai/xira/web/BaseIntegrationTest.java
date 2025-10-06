@@ -62,11 +62,23 @@ abstract class BaseIntegrationTest {
     @Autowired
     private XiraUserRepository xiraUserRepository;
 
+    @Autowired
+    private IssueAssigneeRepository issueAssigneeRepository;
+
+    @Autowired
+    private IssueCommentRepository issueCommentRepository;
+
+    @Autowired
+    private IssueRepository issueRepository;
+
     @BeforeEach
     void configureRestAssured() {
         RestAssured.baseURI = "http://localhost";
         RestAssured.port = port;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
+        issueCommentRepository.deleteAll();
+        issueAssigneeRepository.deleteAll();
+        issueRepository.deleteAll();
         sprintIssueRepository.deleteAll();
         sprintRepository.deleteAll();
         boardColumnWorkflowStatusRepository.deleteAll();

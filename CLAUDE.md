@@ -92,6 +92,9 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 - **Consistency**: Always follow the same coding style and patterns you can see in similar classes in this project
   (e.g., other services, entities, controllers, mappers, tests, etc.)
 - **Lean Code**: Simplicity first, complexity only when necessary
+- **Minimal database access**: Avoid multiple repository queries if a single one is enough (e.g., instead of
+  `project = projectRepository.findByKey(key)` and `workflowStatusRepository.findByWorkflow(project.getWorkflow())`, use
+  `workflowRepository.findByWorkflowProjectKey(key)`)
 - **Modularization**: Keep methods and classes small and focused, use helper methods and util classes where necessary
 - **No Comments**: Write self-explanatory code with meaningful names instead of adding comments
 - **Functional Style**: Always use streams, Optional, and lambdas over loops and null checks

@@ -31,10 +31,10 @@ public class SprintController implements SprintsApi {
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")
-    public ResponseEntity<SprintResponse> updateSprint(final String key, final UUID sprintId,
+    public ResponseEntity<Void> updateSprint(final String key, final UUID sprintId,
             final UpdateSprintRequest updateSprintRequest) {
-        final SprintResponse sprint = sprintService.updateSprint(key, sprintId.toString(), updateSprintRequest);
-        return ResponseEntity.ok(sprint);
+        sprintService.updateSprint(key, sprintId.toString(), updateSprintRequest);
+        return ResponseEntity.ok().build();
     }
 
     @Override

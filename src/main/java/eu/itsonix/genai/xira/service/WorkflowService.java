@@ -6,6 +6,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
@@ -14,6 +15,8 @@ import eu.itsonix.genai.xira.jpa.entity.Workflow;
 import eu.itsonix.genai.xira.jpa.entity.WorkflowStatus;
 import eu.itsonix.genai.xira.jpa.entity.WorkflowStatusCategory;
 import eu.itsonix.genai.xira.jpa.repository.WorkflowStatusRepository;
+import eu.itsonix.genai.xira.mapper.WorkflowMapper;
+import eu.itsonix.genai.xira.web.model.WorkflowStatusResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -57,5 +60,13 @@ public class WorkflowService {
         return workflowStatusRepository.findByWorkflowProjectIdOrderByStatusOrderAsc(projectId)
                 .stream()
                 .collect(Collectors.toMap(WorkflowStatus::getCategory, Function.identity(), (first, _) -> first));
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkflowStatusResponse> getWorkflowStatuses(final String projectKey) {
+        return workflowStatusRepository.findByWorkflowProjectKeyIgnoreCaseOrderByStatusOrderAsc(projectKey)
+                .stream()
+                .map(WorkflowMapper::toWorkflowStatusResponse)
+                .toList();
     }
 }

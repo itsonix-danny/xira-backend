@@ -15,6 +15,8 @@ tags:
     description: Board management endpoints
   - name: Sprints
     description: Sprint management endpoints
+  - name: Issues
+    description: Issue management endpoints
 
 paths:
   /users:
@@ -332,10 +334,6 @@ paths:
       responses:
         '200':
           description: Sprint updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SprintResponse'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -543,6 +541,372 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues:
+    post:
+      tags: [ Issues ]
+      operationId: createIssue
+      summary: Create a new issue for a project
+      description: 'Creates a new issue for the specified project. The authenticated user becomes the reporter. The default workflow status with the minimum order is assigned.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIssueRequest'
+      responses:
+        '201':
+          description: Issue created successfully
+          headers:
+            Location:
+              description: URL of the created issue resource
+              schema:
+                type: string
+                format: uri
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}:
+    patch:
+      tags: [ Issues ]
+      operationId: updateIssue
+      summary: Update an existing issue
+      description: 'Updates title and/or description of an existing issue.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key (e.g., XIRA-1)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateIssueRequest'
+      responses:
+        '200':
+          description: Issue updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/assignees:
+    post:
+      tags: [ Issues ]
+      operationId: addAssignee
+      summary: Add an assignee to an issue
+      description: 'Adds a user as an assignee to the specified issue.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddAssigneeRequest'
+      responses:
+        '201':
+          description: Assignee added successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/assignees/{userId}:
+    delete:
+      tags: [ Issues ]
+      operationId: removeAssignee
+      summary: Remove an assignee from an issue
+      description: 'Removes a user as an assignee from the specified issue.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Assignee removed successfully
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/status:
+    patch:
+      tags: [ Issues ]
+      operationId: setIssueStatus
+      summary: Set workflow status of an issue
+      description: 'Sets the workflow status of an issue. If the new status has category DONE, sets closedAt to current time, otherwise sets it to null.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetIssueStatusRequest'
+      responses:
+        '200':
+          description: Issue status updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/comments:
+    post:
+      tags: [ Issues ]
+      operationId: addComment
+      summary: Add a comment to an issue
+      description: 'Adds a new comment to the specified issue.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCommentRequest'
+      responses:
+        '201':
+          description: Comment added successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/comments/{commentId}:
+    patch:
+      tags: [ Issues ]
+      operationId: updateComment
+      summary: Update a comment
+      description: 'Updates an existing comment. Only the comment author can update it.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          description: Comment ID
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCommentRequest'
+      responses:
+        '200':
+          description: Comment updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [ Issues ]
+      operationId: deleteComment
+      summary: Delete a comment
+      description: 'Deletes a comment. Can be done by the comment author or project admins.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+        - name: commentId
+          in: path
+          required: true
+          description: Comment ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/workflows/statuses:
+    get:
+      tags: [ Projects ]
+      operationId: getWorkflowStatuses
+      summary: Get all workflow statuses of a project
+      description: 'Returns all workflow statuses for the specified project, sorted by status order.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Workflow statuses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkflowStatusResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
@@ -942,3 +1306,99 @@ components:
         lastName:
           type: string
           description: User last name
+
+    WorkflowStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, name, category ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Workflow status identifier
+        name:
+          type: string
+          description: Workflow status name
+        category:
+          type: string
+          description: Workflow status category
+          enum: [ TODO, IN_PROGRESS, DONE ]
+
+    CreateIssueRequest:
+      type: object
+      additionalProperties: false
+      required: [ title, issueType, priority ]
+      properties:
+        title:
+          type: string
+          description: Issue title
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          description: Issue description
+          maxLength: 5000
+        issueType:
+          type: string
+          description: Type of issue
+          enum: [ BUG, TASK, STORY ]
+        priority:
+          type: string
+          description: Issue priority
+          enum: [ LOW, MEDIUM, HIGH, CRITICAL ]
+
+    UpdateIssueRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          description: Issue title
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          description: Issue description
+          maxLength: 5000
+
+    AddAssigneeRequest:
+      type: object
+      additionalProperties: false
+      required: [ userId ]
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: User ID to assign
+
+    SetIssueStatusRequest:
+      type: object
+      additionalProperties: false
+      required: [ statusId ]
+      properties:
+        statusId:
+          type: string
+          format: uuid
+          description: Workflow status ID
+
+    AddCommentRequest:
+      type: object
+      additionalProperties: false
+      required: [ content ]
+      properties:
+        content:
+          type: string
+          description: Comment content
+          minLength: 1
+          maxLength: 5000
+
+    UpdateCommentRequest:
+      type: object
+      additionalProperties: false
+      required: [ content ]
+      properties:
+        content:
+          type: string
+          description: Comment content
+          minLength: 1
+          maxLength: 5000

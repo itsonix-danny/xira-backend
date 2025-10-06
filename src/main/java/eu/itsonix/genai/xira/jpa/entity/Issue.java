@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 
 import java.time.Instant;
 
-import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
@@ -63,19 +62,11 @@ public class Issue {
     @Column(name = "reporter_id", insertable = false, updatable = false)
     private String reporterId;
 
-    @ManyToOne
-    @JoinColumn(name = "assignee_id")
-    private XiraUser assignee;
-
-    @Column(name = "assignee_id", insertable = false, updatable = false)
-    private String assigneeId;
-
     @Column(nullable = false)
     private String title;
 
     @Lob
-    @Column(columnDefinition = "TEXT", nullable = false)
-    @ColumnDefault("''")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @CreatedDate

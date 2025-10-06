@@ -86,13 +86,12 @@ class SprintServiceTest {
         final Sprint sprint = plannedSprint();
         when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
                 .thenReturn(Optional.of(sprint));
-        when(sprintRepository.save(sprint)).thenReturn(sprint);
 
-        final SprintResponse response = sprintService.updateSprint(PROJECT_KEY, sprint.getId(),
+        sprintService.updateSprint(PROJECT_KEY, sprint.getId(),
                 new UpdateSprintRequest().name("Updated Sprint").goal("Updated goal"));
 
-        assertThat(response.getName()).isEqualTo("Updated Sprint");
-        assertThat(response.getGoal()).isEqualTo("Updated goal");
+        assertThat(sprint.getName()).isEqualTo("Updated Sprint");
+        assertThat(sprint.getGoal()).isEqualTo("Updated goal");
         verify(sprintRepository).save(sprint);
     }
 
