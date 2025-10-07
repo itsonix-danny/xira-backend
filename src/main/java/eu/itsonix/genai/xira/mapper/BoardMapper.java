@@ -32,6 +32,11 @@ public final class BoardMapper {
 
     private static BoardColumnResponse toBoardColumnResponse(final BoardColumn column, final List<Issue> issues) {
         return new BoardColumnResponse().name(column.getName())
+                .statuses(column.getBoardColumnWorkflowStatuses()
+                        .stream()
+                        .map(boardColumnWorkflowStatus -> WorkflowMapper
+                                .toWorkflowStatusResponse(boardColumnWorkflowStatus.getWorkflowStatus()))
+                        .toList())
                 .issues(issues.stream().map(IssueMapper::toIssueSummaryResponse).toList());
     }
 }

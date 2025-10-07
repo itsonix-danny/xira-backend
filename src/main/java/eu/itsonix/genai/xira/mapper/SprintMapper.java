@@ -63,6 +63,14 @@ public final class SprintMapper {
     private static BoardColumnResponse toBoardColumnResponseForSprint(final BoardColumn column,
             final List<Issue> issues) {
         return new BoardColumnResponse().name(column.getName())
+                .statuses(column.getBoardColumnWorkflowStatuses()
+                        .stream()
+                        .sorted(Comparator
+                                .comparing(boardColumnWorkflowStatus -> boardColumnWorkflowStatus.getWorkflowStatus()
+                                        .getStatusOrder()))
+                        .map(boardColumnWorkflowStatus -> WorkflowMapper
+                                .toWorkflowStatusResponse(boardColumnWorkflowStatus.getWorkflowStatus()))
+                        .toList())
                 .issues(issues.stream()
                         .sorted(Comparator.comparing(Issue::getSeqNo))
                         .map(IssueMapper::toIssueSummaryResponse)

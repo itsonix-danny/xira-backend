@@ -1,11 +1,13 @@
 package eu.itsonix.genai.xira.web;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
 import eu.itsonix.genai.xira.web.model.AddBoardRequest;
+import eu.itsonix.genai.xira.web.model.AddSprintRequest;
 import eu.itsonix.genai.xira.web.model.RegisterRequest;
 import eu.itsonix.genai.xira.web.model.UpdateBoardRequest;
 import io.restassured.http.ContentType;
@@ -425,7 +427,13 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(200)
                 .body("name", equalTo("Kanban Board"))
                 .body("type", equalTo("KANBAN"))
-                .body("columns.size()", equalTo(3));
+                .body("columns.size()", equalTo(3))
+                .body("columns[0].statuses.size()", equalTo(1))
+                .body("columns[1].statuses.size()", equalTo(1))
+                .body("columns[2].statuses.size()", equalTo(1))
+                .body("columns[0].statuses[0].name", equalTo("To Do"))
+                .body("columns[1].statuses[0].name", equalTo("In Progress"))
+                .body("columns[2].statuses[0].name", equalTo("Done"));
     }
 
     @Test
@@ -601,6 +609,55 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .get("/projects/XIRA/boards/1/active-sprint")
                 .then()
                 .statusCode(403);
+    }
+
+    @Test
+    void givenScrumBoardWithActiveSprint_whenGetActiveSprint_thenReturns200WithColumnsAndStatuses() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        final String sprintLocation = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddSprintRequest().name("Sprint 1").goal("First Sprint"))
+                .when()
+                .post("/projects/XIRA/sprints")
+                .then()
+                .statusCode(201)
+                .extract()
+                .header(HttpHeaders.LOCATION);
+
+        final String sprintId = extractIdFromLocation(sprintLocation);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .post("/projects/XIRA/sprints/{sprintId}/start", UUID.fromString(sprintId))
+                .then()
+                .statusCode(200);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/1/active-sprint")
+                .then()
+                .statusCode(200)
+                .body("name", equalTo("Sprint 1"))
+                .body("state", equalTo("ACTIVE"))
+                .body("columns.size()", equalTo(3))
+                .body("columns[0].statuses.size()", equalTo(1))
+                .body("columns[1].statuses.size()", equalTo(1))
+                .body("columns[2].statuses.size()", equalTo(1))
+                .body("columns[0].statuses[0].name", equalTo("To Do"))
+                .body("columns[1].statuses[0].name", equalTo("In Progress"))
+                .body("columns[2].statuses[0].name", equalTo("Done"));
     }
 
 }

@@ -11,6 +11,6 @@ import eu.itsonix.genai.xira.jpa.entity.BoardColumn;
 @Repository
 public interface BoardColumnRepository extends JpaRepository<BoardColumn, String> {
 
-    @EntityGraph(attributePaths = { "board", "boardColumnWorkflowStatuses" })
+    @EntityGraph(attributePaths = { "board", "boardColumnWorkflowStatuses", "boardColumnWorkflowStatuses.workflowStatus" })
     List<BoardColumn> findByBoardIdOrderByColumnOrder(final String boardId);
 }

@@ -1290,11 +1290,16 @@ components:
     BoardColumnResponse:
       type: object
       additionalProperties: false
-      required: [ name, issues ]
+      required: [ name, statuses, issues ]
       properties:
         name:
           type: string
           description: Column name
+        statuses:
+          type: array
+          description: List of workflow statuses that map to this column
+          items:
+            $ref: '#/components/schemas/WorkflowStatusResponse'
         issues:
           type: array
           description: List of issues in this column
