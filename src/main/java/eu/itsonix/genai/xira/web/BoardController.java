@@ -1,6 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
 import java.net.URI;
+import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -10,7 +11,9 @@ import lombok.RequiredArgsConstructor;
 
 import eu.itsonix.genai.xira.service.BoardService;
 import eu.itsonix.genai.xira.web.api.BoardsApi;
+import eu.itsonix.genai.xira.web.model.ActiveSprintResponse;
 import eu.itsonix.genai.xira.web.model.AddBoardRequest;
+import eu.itsonix.genai.xira.web.model.GetBoardDetails200Response;
 import eu.itsonix.genai.xira.web.model.UpdateBoardRequest;
 
 @RestController
@@ -27,8 +30,23 @@ public class BoardController implements BoardsApi {
     }
 
     @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<GetBoardDetails200Response> getBoardDetails(final String key, final Integer boardNumber) {
+        return ResponseEntity.ok(boardService.getBoardDetails(key, boardNumber));
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<ActiveSprintResponse> getActiveSprint(final String key, final Integer boardNumber) {
+        return Optional.ofNullable(boardService.getActiveSprint(key, boardNumber))
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
+    @Override
     @PreAuthorize("@authService.isProjectAdmin(#key)")
-    public ResponseEntity<Void> updateBoard(final String key, final Integer boardNumber, final UpdateBoardRequest updateBoardRequest) {
+    public ResponseEntity<Void> updateBoard(final String key, final Integer boardNumber,
+            final UpdateBoardRequest updateBoardRequest) {
         boardService.updateBoard(key, boardNumber, updateBoardRequest);
         return ResponseEntity.ok().build();
     }

@@ -3,7 +3,10 @@ package eu.itsonix.genai.xira.service;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.List;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.repository.*;
+import eu.itsonix.genai.xira.jpa.specification.IssueSpecification;
+import eu.itsonix.genai.xira.mapper.IssueMapper;
 import eu.itsonix.genai.xira.web.model.*;
 
 @Service
@@ -155,5 +160,19 @@ public class IssueService {
                 .orElseThrow(() -> new EntityNotFoundException("Comment not found"));
 
         issueCommentRepository.delete(comment);
+    }
+
+    @Transactional(readOnly = true)
+    public List<IssueSummaryResponse> getIssues(final String projectKey, final String assigneeId,
+            final Boolean includeFinished, final String search) {
+        final String userId = authService.getAuthenticatedUser().getId();
+        final Specification<Issue> spec = IssueSpecification.getIssuesForUser(userId, projectKey, assigneeId,
+                includeFinished, search);
+
+        return issueRepository.findAll(spec)
+                .stream()
+                .sorted(Comparator.comparing(Issue::getSeqNo))
+                .map(IssueMapper::toIssueSummaryResponse)
+                .toList();
     }
 }

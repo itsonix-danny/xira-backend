@@ -3,6 +3,8 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
+@ToString(exclude = { "issueAssignees", "sprintIssues" })
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -68,6 +70,14 @@ public class Issue {
     @Lob
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @OneToMany(mappedBy = "issue", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<IssueAssignee> issueAssignees = new HashSet<>();
+
+    @OneToMany(mappedBy = "issue", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<SprintIssue> sprintIssues = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false)

@@ -109,6 +109,12 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
   avoid `@Query` unless absolutely necessary
 - **Avoid (N+1)-Problem**: When related entities are needed, use `@EntityGraph` on repository methods (e.g.,
   `@EntityGraph(attributePaths = { "project", "project.owner" })` for `findAllByUserId(final String userId)`)
+- **Entity Relationships & Deep Fetching**: Add `@OneToMany` relationships to enable deep fetching with `@EntityGraph`.
+  Use `Set` instead of `List` to avoid `MultipleBagFetchException` when fetching multiple collections simultaneously
+- **Clean Mapper Inputs**: Mappers must ONLY accept entities (when they map to DTOs) or DTOs (when they map to
+  entities), never mixed entity/DTO parameters. Mappers perform all nested conversions internally
+- **Service Layer Pattern**: Services query entities and prepare data structures (grouping, filtering), then pass
+  entities to mappers. Pattern: `query → prepare → map → return` (see `BoardService#getScrumBoardDetails` as an example)
 - **Transactional Boundaries**: Mark read-only operations with `@Transactional(readOnly = true)`
 - **Service Layer**: All business logic in services, controllers only handle HTTP concerns
 - **Error Handling**: Log errors with context, throw domain-specific exceptions

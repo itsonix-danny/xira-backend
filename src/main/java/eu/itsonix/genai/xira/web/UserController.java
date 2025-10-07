@@ -1,5 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -20,8 +22,8 @@ public class UserController implements UsersApi {
 
     @Override
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<UserResponse> getUsers(final String email) {
-        final UserResponse userResponse = userService.findByEmail(email);
-        return ResponseEntity.ok(userResponse);
+    public ResponseEntity<List<UserResponse>> getUsers(final String email, final String projectKey) {
+        final List<UserResponse> users = userService.searchUsers(email, projectKey);
+        return ResponseEntity.ok(users);
     }
 }

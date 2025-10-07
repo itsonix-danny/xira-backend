@@ -1,5 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
@@ -376,6 +378,229 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .patch("/projects/XIRA/boards/abc")
                 .then()
                 .statusCode(400);
+    }
+
+    @Test
+    void givenScrumBoardWithData_whenGetBoardDetails_thenReturns200WithCorrectStructure() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(200)
+                .body("name", equalTo("Scrum Board"))
+                .body("type", equalTo("SCRUM"))
+                .body("backlog", equalTo(List.of()));
+    }
+
+    @Test
+    void givenKanbanBoardWithIssues_whenGetBoardDetails_thenReturns200WithColumns() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Kanban Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(200)
+                .body("name", equalTo("Kanban Board"))
+                .body("type", equalTo("KANBAN"))
+                .body("columns.size()", equalTo(3));
+    }
+
+    @Test
+    void givenNonExistentBoard_whenGetBoardDetails_thenReturns404() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/99")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenNonMember_whenGetBoardDetails_thenReturns403() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+        createProject(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddBoardRequest().name("Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .body(new RegisterRequest().email("outsider@example.com")
+                        .password(PASSWORD)
+                        .firstName("Outsider")
+                        .lastName("User"))
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(201);
+
+        final String outsiderToken = login("outsider@example.com", PASSWORD);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", outsiderToken))
+                .when()
+                .get("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetBoardDetails_thenReturns401() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().when()
+                .get("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenScrumBoardWithoutActiveSprint_whenGetActiveSprint_thenReturns204() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/1/active-sprint")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void givenKanbanBoard_whenGetActiveSprint_thenReturns404() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Kanban Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/1/active-sprint")
+                .then()
+                .statusCode(404)
+                .body("detail", equalTo("Board not found or not a SCRUM board"));
+    }
+
+    @Test
+    void givenNonExistentBoard_whenGetActiveSprint_thenReturns404() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/XIRA/boards/99/active-sprint")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetActiveSprint_thenReturns401() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().when()
+                .get("/projects/XIRA/boards/1/active-sprint")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenNonMember_whenGetActiveSprint_thenReturns403() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+        createProject(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .body(new RegisterRequest().email("outsider@example.com")
+                        .password(PASSWORD)
+                        .firstName("Outsider")
+                        .lastName("User"))
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(201);
+
+        final String outsiderToken = login("outsider@example.com", PASSWORD);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", outsiderToken))
+                .when()
+                .get("/projects/XIRA/boards/1/active-sprint")
+                .then()
+                .statusCode(403);
     }
 
 }

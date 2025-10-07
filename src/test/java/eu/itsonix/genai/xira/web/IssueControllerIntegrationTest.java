@@ -669,6 +669,193 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(403);
     }
 
+    @Test
+    void givenNoFilters_whenGetIssues_thenReturnsAllUnfinishedIssuesFromUserProjects() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(2));
+    }
+
+    @Test
+    void givenProjectKeyFilter_whenGetIssues_thenReturnsOnlyIssuesFromThatProject() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("projectKey", "XIRA")
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(1))
+                .body("[0].key", org.hamcrest.Matchers.equalTo("XIRA-1"));
+    }
+
+    @Test
+    void givenAssigneeFilter_whenGetIssues_thenReturnsOnlyAssignedIssues() {
+        registerUser("admin@example.com", "password", "Admin", "User");
+        final String adminToken = login("admin@example.com", "password");
+        createProject(adminToken);
+
+        registerUser("developer@example.com", "password", "Dev", "User");
+        final String developerId = getUserIdByEmail(adminToken, "developer@example.com");
+        addProjectMember(adminToken, developerId, ProjectMemberRole.DEVELOPER);
+
+        createIssue(adminToken, "Unassigned Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(adminToken, "Assigned Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddAssigneeRequest request = new AddAssigneeRequest().userId(UUID.fromString(developerId));
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", adminToken))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/assignees", "XIRA", issueKey);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", adminToken))
+                .queryParam("assigneeId", developerId)
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(1))
+                .body("[0].title", org.hamcrest.Matchers.equalTo("Assigned Issue"));
+    }
+
+    @Test
+    void givenIncludeFinishedFalse_whenGetIssues_thenReturnsOnlyUnfinished() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String finishedIssueKey = createIssue(token, "Finished Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final String doneStatusId = getDoneStatusId(token);
+        final SetIssueStatusRequest statusRequest = new SetIssueStatusRequest().statusId(UUID.fromString(doneStatusId));
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(statusRequest)
+                .patch("/projects/{key}/issues/{issueKey}/status", "XIRA", finishedIssueKey);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("includeFinished", false)
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(1))
+                .body("[0].title", org.hamcrest.Matchers.equalTo("Open Issue"));
+    }
+
+    @Test
+    void givenIncludeFinishedTrue_whenGetIssues_thenReturnsAllIssues() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String finishedIssueKey = createIssue(token, "Finished Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final String doneStatusId = getDoneStatusId(token);
+        final SetIssueStatusRequest statusRequest = new SetIssueStatusRequest().statusId(UUID.fromString(doneStatusId));
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(statusRequest)
+                .patch("/projects/{key}/issues/{issueKey}/status", "XIRA", finishedIssueKey);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("includeFinished", true)
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(2));
+    }
+
+    @Test
+    void givenSearchFilter_whenGetIssues_thenReturnsMatchingIssues() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "Bug in login", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "Feature request", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "Login form styling", CreateIssueRequest.IssueTypeEnum.STORY);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .queryParam("search", "login")
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(2));
+    }
+
+    @Test
+    void givenMultipleProjects_whenGetIssues_thenReturnsIssuesFromAllUserProjects() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+
+        createProject(token);
+        createIssue(token, "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+
+        createProjectWithKey(token);
+        createIssue(token, "TEST Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(2));
+    }
+
+    @Test
+    void givenIssuesSortedBySeqNo_whenGetIssues_thenReturnsInOrder() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        createIssue(token, "First Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "Second Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "Third Issue", CreateIssueRequest.IssueTypeEnum.STORY);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/issues")
+                .then()
+                .statusCode(200)
+                .body("size()", org.hamcrest.Matchers.equalTo(3))
+                .body("[0].key", org.hamcrest.Matchers.equalTo("XIRA-1"))
+                .body("[1].key", org.hamcrest.Matchers.equalTo("XIRA-2"))
+                .body("[2].key", org.hamcrest.Matchers.equalTo("XIRA-3"));
+    }
+
+    @Test
+    void givenUnauthenticated_whenGetIssues_thenReturns401() {
+        given().contentType(ContentType.JSON).when().get("/issues").then().statusCode(401);
+    }
+
     private String getWorkflowStatusId(final String token) {
         final WorkflowStatusResponse[] statuses = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -684,5 +871,48 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
             }
         }
         throw new IllegalStateException("Status not found: " + "In Progress");
+    }
+
+    private String getDoneStatusId(final String token) {
+        final WorkflowStatusResponse[] statuses = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/workflows/statuses", "XIRA")
+                .then()
+                .extract()
+                .as(WorkflowStatusResponse[].class);
+
+        for (final WorkflowStatusResponse status : statuses) {
+            if (status.getName().equals("Done")) {
+                return status.getId().toString();
+            }
+        }
+        throw new IllegalStateException("Status not found: Done");
+    }
+
+    private String createIssue(final String token, final String title,
+            final CreateIssueRequest.IssueTypeEnum issueType) {
+        final CreateIssueRequest request = new CreateIssueRequest().title(title)
+                .issueType(issueType)
+                .priority(CreateIssueRequest.PriorityEnum.HIGH);
+
+        final String location = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues", "XIRA")
+                .then()
+                .extract()
+                .header(HttpHeaders.LOCATION);
+
+        return location.substring(location.lastIndexOf('/') + 1);
+    }
+
+    private void createProjectWithKey(final String token) {
+        final CreateProjectRequest request = new CreateProjectRequest().key("TEST").name("Test Project");
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects");
     }
 }

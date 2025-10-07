@@ -3,6 +3,8 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
+@ToString(exclude = { "boardColumnWorkflowStatuses" })
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -39,6 +41,10 @@ public class BoardColumn {
 
     @Column(nullable = false)
     private Integer columnOrder;
+
+    @OneToMany(mappedBy = "boardColumn", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<BoardColumnWorkflowStatus> boardColumnWorkflowStatuses = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false)

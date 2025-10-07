@@ -80,8 +80,8 @@ class WorkflowServiceTest {
         final List<WorkflowStatusResponse> result = workflowService.getWorkflowStatuses(projectKey);
 
         assertThat(result).hasSize(3);
-        assertThat(result.get(0).getName()).isEqualTo("To Do");
-        assertThat(result.get(0).getCategory()).isEqualTo(WorkflowStatusResponse.CategoryEnum.TODO);
+        assertThat(result.getFirst().getName()).isEqualTo("To Do");
+        assertThat(result.getFirst().getCategory()).isEqualTo(WorkflowStatusResponse.CategoryEnum.TODO);
         assertThat(result.get(1).getName()).isEqualTo("In Progress");
         assertThat(result.get(1).getCategory()).isEqualTo(WorkflowStatusResponse.CategoryEnum.IN_PROGRESS);
         assertThat(result.get(2).getName()).isEqualTo("Done");

@@ -1,6 +1,7 @@
 package eu.itsonix.genai.xira.web;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,13 @@ import eu.itsonix.genai.xira.web.model.*;
 public class IssueController implements IssuesApi {
 
     private final IssueService issueService;
+
+    @Override
+    public ResponseEntity<List<IssueSummaryResponse>> getIssues(final String projectKey, final UUID assigneeId,
+            final Boolean includeFinished, final String search) {
+        return ResponseEntity.ok(issueService.getIssues(projectKey,
+                assigneeId != null ? assigneeId.toString() : null, includeFinished, search));
+    }
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")

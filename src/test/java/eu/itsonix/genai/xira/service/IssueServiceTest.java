@@ -3,7 +3,9 @@ package eu.itsonix.genai.xira.service;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.repository.*;
@@ -507,5 +510,293 @@ class IssueServiceTest {
                 .hasMessage("Comment not found");
 
         verify(issueCommentRepository, never()).delete(any());
+    }
+
+    @Test
+    void givenNoFilters_whenGetIssues_thenReturnsUnfinishedIssuesFromUserProjects() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue issue1 = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("First Issue")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .build();
+
+        final Issue issue2 = Issue.builder()
+                .id("issue2-id")
+                .key("XIRA-2")
+                .title("Second Issue")
+                .seqNo(2)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.TASK)
+                .priority(IssuePriority.MEDIUM)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(issue1, issue2));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, null, null, null);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+        assertThat(result.get(1).getKey()).isEqualTo("XIRA-2");
+        verify(issueRepository).findAll(any(Specification.class));
+    }
+
+    @Test
+    void givenProjectKeyFilter_whenGetIssues_thenReturnsIssuesFromSpecificProject() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue issue1 = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("First Issue")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(issue1));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues("XIRA", null, null, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+    }
+
+    @Test
+    void givenAssigneeFilter_whenGetIssues_thenReturnsIssuesAssignedToUser() {
+        final String userId = "550e8400-e29b-41d4-a716-446655440010";
+        final String assigneeId = "550e8400-e29b-41d4-a716-446655440011";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final XiraUser assignee = XiraUser.builder().id(assigneeId).email("assignee@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue issue1 = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("Assigned Issue")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set
+                        .of(IssueAssignee.builder().issueId("issue1-id").userId(assigneeId).xiraUser(assignee).build()))
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(issue1));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, assigneeId, null, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+    }
+
+    @Test
+    void givenIncludeFinishedTrue_whenGetIssues_thenReturnsAllIssuesIncludingFinished() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus todoStatus = WorkflowStatus.builder()
+                .id("todo-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+        final WorkflowStatus doneStatus = WorkflowStatus.builder()
+                .id("done-id")
+                .name("Done")
+                .category(WorkflowStatusCategory.DONE)
+                .build();
+
+        final Issue openIssue = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("Open Issue")
+                .seqNo(1)
+                .project(project)
+                .status(todoStatus)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .build();
+
+        final Issue closedIssue = Issue.builder()
+                .id("issue2-id")
+                .key("XIRA-2")
+                .title("Closed Issue")
+                .seqNo(2)
+                .project(project)
+                .status(doneStatus)
+                .issueType(IssueType.TASK)
+                .priority(IssuePriority.MEDIUM)
+                .closedAt(Instant.now())
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(openIssue, closedIssue));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, null, true, null);
+
+        assertThat(result).hasSize(2);
+    }
+
+    @Test
+    void givenIncludeFinishedFalse_whenGetIssues_thenReturnsOnlyUnfinishedIssues() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue openIssue = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("Open Issue")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(openIssue));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, null, false, null);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+    }
+
+    @Test
+    void givenSearchFilter_whenGetIssues_thenReturnsMatchingIssues() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue matchingIssue = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("Bug in login")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(matchingIssue));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, null, null, "login");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+    }
+
+    @Test
+    void givenMultipleIssues_whenGetIssues_thenReturnsSortedBySeqNo() {
+        final String userId = "user-id";
+        final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
+        final Project project = Project.builder().id("project-id").key("XIRA").build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("status-id")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+
+        final Issue issue3 = Issue.builder()
+                .id("issue3-id")
+                .key("XIRA-3")
+                .title("Third Issue")
+                .seqNo(3)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set.of())
+                .build();
+
+        final Issue issue1 = Issue.builder()
+                .id("issue1-id")
+                .key("XIRA-1")
+                .title("First Issue")
+                .seqNo(1)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set.of())
+                .build();
+
+        final Issue issue2 = Issue.builder()
+                .id("issue2-id")
+                .key("XIRA-2")
+                .title("Second Issue")
+                .seqNo(2)
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .issueAssignees(Set.of())
+                .build();
+
+        when(authService.getAuthenticatedUser()).thenReturn(user);
+        when(issueRepository.findAll(any(Specification.class))).thenReturn(List.of(issue3, issue1, issue2));
+
+        final List<IssueSummaryResponse> result = issueService.getIssues(null, null, null, null);
+
+        assertThat(result).hasSize(3);
+        assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
+        assertThat(result.get(1).getKey()).isEqualTo("XIRA-2");
+        assertThat(result.get(2).getKey()).isEqualTo("XIRA-3");
     }
 }

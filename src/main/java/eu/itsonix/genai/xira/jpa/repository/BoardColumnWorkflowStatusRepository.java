@@ -7,5 +7,6 @@ import eu.itsonix.genai.xira.jpa.entity.BoardColumnWorkflowStatus;
 import eu.itsonix.genai.xira.jpa.entity.BoardColumnWorkflowStatusId;
 
 @Repository
-public interface BoardColumnWorkflowStatusRepository extends JpaRepository<BoardColumnWorkflowStatus, BoardColumnWorkflowStatusId> {
+public interface BoardColumnWorkflowStatusRepository
+        extends JpaRepository<BoardColumnWorkflowStatus, BoardColumnWorkflowStatusId> {
 }

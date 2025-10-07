@@ -23,30 +23,36 @@ paths:
     get:
       tags: [ Users ]
       operationId: getUsers
-      summary: Search for users by email
-      description: 'Find users by email address. Returns user details including ID.'
+      summary: Search for users
+      description: 'Search for users by optional email filter and/or exclude users already assigned to a specific project. Returns a list of matching users.'
       security:
         - BearerAuth: [ ]
       parameters:
         - name: email
           in: query
-          required: true
-          description: Email address to search for
+          required: false
+          description: Optional email address for exact match (case-insensitive)
           schema:
             type: string
             format: email
+        - name: projectKey
+          in: query
+          required: false
+          description: Optional project key to exclude users that are already members of this project
+          schema:
+            type: string
       responses:
         '200':
-          description: User found
+          description: List of users matching the search criteria (empty array if no matches)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
-          $ref: '#/components/responses/Problem'
-        '404':
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
@@ -468,6 +474,43 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects/{key}/boards/{boardNumber}:
+    get:
+      tags: [ Boards ]
+      operationId: getBoardDetails
+      summary: Get board details
+      description: 'Returns detailed board information with type-specific content (SCRUM: sprints and backlog, KANBAN: columns with issues). Only accessible by project members.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: boardNumber
+          in: path
+          required: true
+          description: Board number
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Board details retrieved successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ScrumBoardDetailsResponse'
+                  - $ref: '#/components/schemas/KanbanBoardDetailsResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     patch:
       tags: [ Boards ]
       operationId: updateBoard
@@ -497,6 +540,47 @@ paths:
       responses:
         '200':
           description: Board updated successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/boards/{boardNumber}/active-sprint:
+    get:
+      tags: [ Boards ]
+      operationId: getActiveSprint
+      summary: Get active sprint view for a SCRUM board
+      description: 'Returns the active sprint with board columns and issues. Only works for SCRUM boards. Returns 204 if no active sprint exists.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: boardNumber
+          in: path
+          required: true
+          description: Board number
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Active sprint retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveSprintResponse'
+        '204':
+          description: No active sprint exists
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -572,6 +656,55 @@ paths:
         '404':
           $ref: '#/components/responses/Problem'
         '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /issues:
+    get:
+      tags: [ Issues ]
+      operationId: getIssues
+      summary: Get issues with optional filters
+      description: 'Returns issues from projects the authenticated user is a member of. By default, returns all unfinished issues. Supports filtering by project, assignee, status, and search term.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: projectKey
+          in: query
+          required: false
+          description: Optional project key to filter issues by project
+          schema:
+            type: string
+        - name: assigneeId
+          in: query
+          required: false
+          description: Optional user ID to filter issues by assignee
+          schema:
+            type: string
+            format: uuid
+        - name: includeFinished
+          in: query
+          required: false
+          description: Include finished issues (default is false)
+          schema:
+            type: boolean
+            default: false
+        - name: search
+          in: query
+          required: false
+          description: Search term to filter by issue key or title (case-insensitive)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Issues retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/IssueSummaryResponse'
+        '401':
           $ref: '#/components/responses/Problem'
         '500':
           $ref: '#/components/responses/Problem'
@@ -1052,6 +1185,169 @@ components:
           type: string
           description: Board type
           enum: [ SCRUM, KANBAN ]
+
+    IssueSummaryResponse:
+      type: object
+      additionalProperties: false
+      required: [ key, title, issueType, statusCategory, priority, assignees ]
+      properties:
+        key:
+          type: string
+          description: Unique issue key (e.g., XIRA-1)
+        title:
+          type: string
+          description: Issue title
+        issueType:
+          type: string
+          description: Type of issue
+          enum: [ BUG, TASK, STORY ]
+        statusCategory:
+          type: string
+          description: Workflow status category
+          enum: [ TODO, IN_PROGRESS, DONE ]
+        priority:
+          type: string
+          description: Issue priority
+          enum: [ LOW, MEDIUM, HIGH, CRITICAL ]
+        assignees:
+          type: array
+          description: List of users assigned to this issue
+          items:
+            $ref: '#/components/schemas/UserResponse'
+
+    SprintWithIssuesResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, name, goal, state, createdAt, issues ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Sprint identifier
+        name:
+          type: string
+          description: Sprint name
+        goal:
+          type: string
+          description: Sprint goal
+        state:
+          $ref: '#/components/schemas/SprintState'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the sprint was created
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the sprint was started
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the sprint was finished
+        issues:
+          type: array
+          description: List of issues in this sprint
+          items:
+            $ref: '#/components/schemas/IssueSummaryResponse'
+
+    BoardColumnResponse:
+      type: object
+      additionalProperties: false
+      required: [ name, issues ]
+      properties:
+        name:
+          type: string
+          description: Column name
+        issues:
+          type: array
+          description: List of issues in this column
+          items:
+            $ref: '#/components/schemas/IssueSummaryResponse'
+
+    ScrumBoardDetailsResponse:
+      type: object
+      additionalProperties: false
+      required: [ name, type, backlog ]
+      properties:
+        name:
+          type: string
+          description: Board name
+        type:
+          type: string
+          description: Board type
+          enum: [ SCRUM ]
+        activeSprint:
+          nullable: true
+          description: Currently active sprint with its issues
+          allOf:
+            - $ref: '#/components/schemas/SprintWithIssuesResponse'
+        plannedSprints:
+          type: array
+          description: Planned sprints ordered by creation date (oldest first)
+          items:
+            $ref: '#/components/schemas/SprintWithIssuesResponse'
+        backlog:
+          type: array
+          description: Backlog issues not assigned to any sprint and not finished, ordered by sequence number
+          items:
+            $ref: '#/components/schemas/IssueSummaryResponse'
+
+    KanbanBoardDetailsResponse:
+      type: object
+      additionalProperties: false
+      required: [ name, type, columns ]
+      properties:
+        name:
+          type: string
+          description: Board name
+        type:
+          type: string
+          description: Board type
+          enum: [ KANBAN ]
+        columns:
+          type: array
+          description: Board columns ordered by column order
+          items:
+            $ref: '#/components/schemas/BoardColumnResponse'
+
+    ActiveSprintResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, name, goal, state, createdAt, columns ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Sprint identifier
+        name:
+          type: string
+          description: Sprint name
+        goal:
+          type: string
+          description: Sprint goal
+        state:
+          $ref: '#/components/schemas/SprintState'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the sprint was created
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the sprint was started
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the sprint was finished
+        columns:
+          type: array
+          description: Board columns with issues from active sprint
+          items:
+            $ref: '#/components/schemas/BoardColumnResponse'
 
     ProjectDetailsResponse:
       type: object

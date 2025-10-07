@@ -131,7 +131,7 @@ abstract class BaseIntegrationTest {
                 .statusCode(200)
                 .extract()
                 .jsonPath()
-                .getString("id");
+                .getString("[0].id");
     }
 
     protected void addProjectMember(final String token, final String userId, final ProjectMemberRole role) {
