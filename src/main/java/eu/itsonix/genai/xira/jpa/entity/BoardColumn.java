@@ -42,7 +42,7 @@ public class BoardColumn {
     @Column(nullable = false)
     private Integer columnOrder;
 
-    @OneToMany(mappedBy = "boardColumn", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "boardColumn", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE, orphanRemoval = true)
     @Builder.Default
     private Set<BoardColumnWorkflowStatus> boardColumnWorkflowStatuses = new HashSet<>();
 

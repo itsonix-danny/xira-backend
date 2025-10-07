@@ -3,6 +3,8 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -15,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString
+@ToString(exclude = {"boardColumns"})
 @Builder
 @Entity
 @Table(uniqueConstraints = {
@@ -46,6 +48,10 @@ public class Board {
 
     @Column(name = "project_id", insertable = false, updatable = false)
     private String projectId;
+
+    @OneToMany(mappedBy = "board", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @Builder.Default
+    private Set<BoardColumn> boardColumns = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false)

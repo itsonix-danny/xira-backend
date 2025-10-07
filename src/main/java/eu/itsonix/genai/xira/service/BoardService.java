@@ -205,4 +205,12 @@ public class BoardService {
 
         return SprintMapper.toActiveSprintResponse(activeSprint, issuesByColumn);
     }
+
+    @Transactional
+    public void deleteBoard(final String projectKey, final Integer boardNumber) {
+        final Board board = boardRepository.findByProjectKeyIgnoreCaseAndBoardNumber(projectKey, boardNumber)
+                .orElseThrow(() -> new EntityNotFoundException("Board not found"));
+
+        boardRepository.delete(board);
+    }
 }

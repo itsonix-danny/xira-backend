@@ -386,6 +386,27 @@ class BoardServiceTest {
                 .hasMessage("Board not found or not a SCRUM board");
     }
 
+    @Test
+    void givenExistingBoard_whenDeleteBoard_thenDeletesBoard() {
+        final Board board = createKanbanBoard();
+
+        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumber("XIRA", 1)).thenReturn(Optional.of(board));
+
+        boardService.deleteBoard("XIRA", 1);
+
+        verify(boardRepository).delete(board);
+    }
+
+    @Test
+    void givenNonExistentBoard_whenDeleteBoard_thenThrowsEntityNotFound() {
+        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumber("XIRA", 99)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> boardService.deleteBoard("XIRA", 99)).isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Board not found");
+
+        verify(boardRepository, never()).delete(any(Board.class));
+    }
+
     private Board createScrumBoard() {
         return Board.builder()
                 .id("board-id")

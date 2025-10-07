@@ -660,4 +660,103 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .body("columns[2].statuses[0].name", equalTo("Done"));
     }
 
+    @Test
+    void givenAdmin_whenDeleteBoard_thenReturnsNoContent() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Board to Delete").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .delete("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void givenNonAdmin_whenDeleteBoard_thenReturnsForbidden() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String ownerToken = login(EMAIL, PASSWORD);
+        createProject(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(new AddBoardRequest().name("Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .body(new RegisterRequest().email("member@example.com")
+                        .password(PASSWORD)
+                        .firstName("Member")
+                        .lastName("User"))
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(201);
+
+        final String memberToken = login("member@example.com", PASSWORD);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", memberToken))
+                .when()
+                .delete("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenUnauthenticated_whenDeleteBoard_thenReturnsUnauthorized() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(new AddBoardRequest().name("Board").type(AddBoardRequest.TypeEnum.KANBAN))
+                .when()
+                .post("/projects/XIRA/boards")
+                .then()
+                .statusCode(201);
+
+        given().when()
+                .delete("/projects/XIRA/boards/1")
+                .then()
+                .statusCode(401);
+    }
+
+    @Test
+    void givenNonExistentBoard_whenDeleteBoard_thenReturnsNotFound() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+        createProject(token);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .delete("/projects/XIRA/boards/99")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenNonExistentProject_whenDeleteBoard_thenReturnsForbidden() {
+        registerUser(EMAIL, PASSWORD, "Owner", "Example");
+        final String token = login(EMAIL, PASSWORD);
+
+        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .delete("/projects/NONEXISTENT/boards/1")
+                .then()
+                .statusCode(403);
+    }
+
 }

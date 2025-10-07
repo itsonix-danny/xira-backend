@@ -50,4 +50,11 @@ public class BoardController implements BoardsApi {
         boardService.updateBoard(key, boardNumber, updateBoardRequest);
         return ResponseEntity.ok().build();
     }
+
+    @Override
+    @PreAuthorize("@authService.isProjectAdmin(#key)")
+    public ResponseEntity<Void> deleteBoard(final String key, final Integer boardNumber) {
+        boardService.deleteBoard(key, boardNumber);
+        return ResponseEntity.noContent().build();
+    }
 }
