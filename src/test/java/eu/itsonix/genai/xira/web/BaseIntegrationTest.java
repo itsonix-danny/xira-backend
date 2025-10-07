@@ -112,18 +112,30 @@ abstract class BaseIntegrationTest {
     }
 
     protected void createProject(final String token) {
+        createProject(token, "XIRA", "Xira Project");
+    }
+
+    protected void createProject(final String token, final String projectKey, final String projectName) {
         given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new CreateProjectRequest().key("XIRA").name("Xira Project"))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new CreateProjectRequest().key(projectKey).name(projectName))
                 .when()
                 .post("/projects")
                 .then()
                 .statusCode(201);
     }
 
+    protected String bearer(final String token) {
+        return String.format("Bearer %s", token);
+    }
+
+    protected String extractIdFromLocation(final String location) {
+        return location.substring(location.lastIndexOf('/') + 1);
+    }
+
     protected String getUserIdByEmail(final String token, final String email) {
         return given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .queryParam("email", email)
                 .when()
                 .get("/users")
@@ -136,7 +148,7 @@ abstract class BaseIntegrationTest {
 
     protected void addProjectMember(final String token, final String userId, final ProjectMemberRole role) {
         given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new AddProjectMemberRequest().userId(UUID.fromString(userId)).role(role))
                 .when()
                 .post("/projects/{key}/members", "XIRA")
@@ -146,11 +158,52 @@ abstract class BaseIntegrationTest {
 
     protected void createBoard(final String token) {
         given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
                 .body(new AddBoardRequest().name("Development Board").type(AddBoardRequest.TypeEnum.KANBAN))
                 .when()
                 .post("/projects/{key}/boards", "XIRA")
                 .then()
                 .statusCode(201);
+    }
+
+    protected String getWorkflowStatusId(final String token, final String statusName) {
+        final WorkflowStatusResponse[] statuses = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .when()
+                .get("/projects/{key}/workflows/statuses", "XIRA")
+                .then()
+                .extract()
+                .as(WorkflowStatusResponse[].class);
+
+        for (final WorkflowStatusResponse status : statuses) {
+            if (status.getName().equals(statusName)) {
+                return status.getId().toString();
+            }
+        }
+        throw new IllegalStateException("Status not found: " + statusName);
+    }
+
+    protected String createIssue(final String token, final String projectKey, final String title,
+            final CreateIssueRequest.IssueTypeEnum issueType) {
+        final CreateIssueRequest request = new CreateIssueRequest().title(title)
+                .issueType(issueType)
+                .priority(CreateIssueRequest.PriorityEnum.HIGH);
+
+        final String location = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(request)
+                .post("/projects/{key}/issues", projectKey)
+                .then()
+                .extract()
+                .header(HttpHeaders.LOCATION);
+
+        return extractIdFromLocation(location);
+    }
+
+    protected String prepareProjectOwner(final String email, final String password) {
+        registerUser(email, password, "Owner", "User");
+        final String token = login(email, password);
+        createProject(token);
+        return token;
     }
 }

@@ -216,7 +216,8 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
                 .body(createRequest)
                 .post("/projects/{key}/issues", "XIRA");
 
-        final UpdateIssueRequest updateRequest = new UpdateIssueRequest().priority(UpdateIssueRequest.PriorityEnum.CRITICAL);
+        final UpdateIssueRequest updateRequest = new UpdateIssueRequest()
+                .priority(UpdateIssueRequest.PriorityEnum.CRITICAL);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -250,7 +251,8 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
                 .body(createRequest)
                 .post("/projects/{key}/issues", "XIRA");
 
-        final UpdateIssueRequest updateRequest = new UpdateIssueRequest().issueType(UpdateIssueRequest.IssueTypeEnum.STORY);
+        final UpdateIssueRequest updateRequest = new UpdateIssueRequest()
+                .issueType(UpdateIssueRequest.IssueTypeEnum.STORY);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -484,7 +486,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
                 .body(createRequest)
                 .post("/projects/{key}/issues", "XIRA");
 
-        final String statusId = getWorkflowStatusId(token);
+        final String statusId = getWorkflowStatusId(token, "In Progress");
         final SetIssueStatusRequest request = new SetIssueStatusRequest().statusId(UUID.fromString(statusId));
 
         given().contentType(ContentType.JSON)
@@ -514,7 +516,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         registerUser("nonmember@example.com", "password", "Non", "Member");
         final String nonMemberToken = login("nonmember@example.com", "password");
 
-        final String statusId = getWorkflowStatusId(ownerToken);
+        final String statusId = getWorkflowStatusId(ownerToken, "In Progress");
         final SetIssueStatusRequest request = new SetIssueStatusRequest().statusId(UUID.fromString(statusId));
 
         given().contentType(ContentType.JSON)
@@ -598,14 +600,14 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
 
         final AddCommentRequest addRequest = new AddCommentRequest().content("Original comment");
 
-        final String commentId = given().contentType(ContentType.JSON)
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
                 .body(addRequest)
                 .post("/projects/{key}/issues/{issueKey}/comments", "XIRA", "XIRA-1")
                 .then()
                 .extract()
-                .header(HttpHeaders.LOCATION)
-                .split("/")[6];
+                .header(HttpHeaders.LOCATION);
+        final String commentId = extractIdFromLocation(location);
 
         final UpdateCommentRequest updateRequest = new UpdateCommentRequest().content("Updated comment");
 
@@ -640,14 +642,14 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
 
         final AddCommentRequest addRequest = new AddCommentRequest().content("Original comment");
 
-        final String commentId = given().contentType(ContentType.JSON)
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
                 .body(addRequest)
                 .post("/projects/{key}/issues/{issueKey}/comments", "XIRA", "XIRA-1")
                 .then()
                 .extract()
-                .header(HttpHeaders.LOCATION)
-                .split("/")[6];
+                .header(HttpHeaders.LOCATION);
+        final String commentId = extractIdFromLocation(location);
 
         final UpdateCommentRequest updateRequest = new UpdateCommentRequest().content("Updated comment");
 
@@ -677,14 +679,14 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
 
         final AddCommentRequest addRequest = new AddCommentRequest().content("Test comment");
 
-        final String commentId = given().contentType(ContentType.JSON)
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
                 .body(addRequest)
                 .post("/projects/{key}/issues/{issueKey}/comments", "XIRA", "XIRA-1")
                 .then()
                 .extract()
-                .header(HttpHeaders.LOCATION)
-                .split("/")[6];
+                .header(HttpHeaders.LOCATION);
+        final String commentId = extractIdFromLocation(location);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -716,14 +718,14 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
 
         final AddCommentRequest addRequest = new AddCommentRequest().content("Test comment");
 
-        final String commentId = given().contentType(ContentType.JSON)
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developerToken))
                 .body(addRequest)
                 .post("/projects/{key}/issues/{issueKey}/comments", "XIRA", "XIRA-1")
                 .then()
                 .extract()
-                .header(HttpHeaders.LOCATION)
-                .split("/")[6];
+                .header(HttpHeaders.LOCATION);
+        final String commentId = extractIdFromLocation(location);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", adminToken))
@@ -760,14 +762,14 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
 
         final AddCommentRequest addRequest = new AddCommentRequest().content("Test comment");
 
-        final String commentId = given().contentType(ContentType.JSON)
+        final String location = given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developer1Token))
                 .body(addRequest)
                 .post("/projects/{key}/issues/{issueKey}/comments", "XIRA", "XIRA-1")
                 .then()
                 .extract()
-                .header(HttpHeaders.LOCATION)
-                .split("/")[6];
+                .header(HttpHeaders.LOCATION);
+        final String commentId = extractIdFromLocation(location);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", developer2Token))
@@ -783,8 +785,8 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
-        createIssue(token, "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -801,7 +803,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "XIRA", "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -824,8 +826,9 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String developerId = getUserIdByEmail(adminToken, "developer@example.com");
         addProjectMember(adminToken, developerId, ProjectMemberRole.DEVELOPER);
 
-        createIssue(adminToken, "Unassigned Issue", CreateIssueRequest.IssueTypeEnum.BUG);
-        final String issueKey = createIssue(adminToken, "Assigned Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(adminToken, "XIRA", "Unassigned Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(adminToken, "XIRA", "Assigned Issue",
+                CreateIssueRequest.IssueTypeEnum.TASK);
 
         final AddAssigneeRequest request = new AddAssigneeRequest().userId(UUID.fromString(developerId));
         given().contentType(ContentType.JSON)
@@ -850,10 +853,11 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
-        final String finishedIssueKey = createIssue(token, "Finished Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "XIRA", "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String finishedIssueKey = createIssue(token, "XIRA", "Finished Issue",
+                CreateIssueRequest.IssueTypeEnum.TASK);
 
-        final String doneStatusId = getDoneStatusId(token);
+        final String doneStatusId = getWorkflowStatusId(token, "Done");
         final SetIssueStatusRequest statusRequest = new SetIssueStatusRequest().statusId(UUID.fromString(doneStatusId));
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -877,10 +881,11 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
-        final String finishedIssueKey = createIssue(token, "Finished Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "XIRA", "Open Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String finishedIssueKey = createIssue(token, "XIRA", "Finished Issue",
+                CreateIssueRequest.IssueTypeEnum.TASK);
 
-        final String doneStatusId = getDoneStatusId(token);
+        final String doneStatusId = getWorkflowStatusId(token, "Done");
         final SetIssueStatusRequest statusRequest = new SetIssueStatusRequest().statusId(UUID.fromString(doneStatusId));
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -903,9 +908,9 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "Bug in login", CreateIssueRequest.IssueTypeEnum.BUG);
-        createIssue(token, "Feature request", CreateIssueRequest.IssueTypeEnum.TASK);
-        createIssue(token, "Login form styling", CreateIssueRequest.IssueTypeEnum.STORY);
+        createIssue(token, "XIRA", "Bug in login", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "XIRA", "Feature request", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "XIRA", "Login form styling", CreateIssueRequest.IssueTypeEnum.STORY);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -923,10 +928,10 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
 
         createProject(token);
-        createIssue(token, "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "XIRA", "XIRA Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
-        createProjectWithKey(token);
-        createIssue(token, "TEST Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createProject(token, "TEST", "Test Project");
+        createIssue(token, "TEST", "TEST Issue", CreateIssueRequest.IssueTypeEnum.TASK);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -943,9 +948,9 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        createIssue(token, "First Issue", CreateIssueRequest.IssueTypeEnum.BUG);
-        createIssue(token, "Second Issue", CreateIssueRequest.IssueTypeEnum.TASK);
-        createIssue(token, "Third Issue", CreateIssueRequest.IssueTypeEnum.STORY);
+        createIssue(token, "XIRA", "First Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        createIssue(token, "XIRA", "Second Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        createIssue(token, "XIRA", "Third Issue", CreateIssueRequest.IssueTypeEnum.STORY);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -964,73 +969,13 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         given().contentType(ContentType.JSON).when().get("/issues").then().statusCode(401);
     }
 
-    private String getWorkflowStatusId(final String token) {
-        final WorkflowStatusResponse[] statuses = given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .when()
-                .get("/projects/{key}/workflows/statuses", "XIRA")
-                .then()
-                .extract()
-                .as(WorkflowStatusResponse[].class);
-
-        for (final WorkflowStatusResponse status : statuses) {
-            if (status.getName().equals("In Progress")) {
-                return status.getId().toString();
-            }
-        }
-        throw new IllegalStateException("Status not found: " + "In Progress");
-    }
-
-    private String getDoneStatusId(final String token) {
-        final WorkflowStatusResponse[] statuses = given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .when()
-                .get("/projects/{key}/workflows/statuses", "XIRA")
-                .then()
-                .extract()
-                .as(WorkflowStatusResponse[].class);
-
-        for (final WorkflowStatusResponse status : statuses) {
-            if (status.getName().equals("Done")) {
-                return status.getId().toString();
-            }
-        }
-        throw new IllegalStateException("Status not found: Done");
-    }
-
-    private String createIssue(final String token, final String title,
-            final CreateIssueRequest.IssueTypeEnum issueType) {
-        final CreateIssueRequest request = new CreateIssueRequest().title(title)
-                .issueType(issueType)
-                .priority(CreateIssueRequest.PriorityEnum.HIGH);
-
-        final String location = given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(request)
-                .post("/projects/{key}/issues", "XIRA")
-                .then()
-                .extract()
-                .header(HttpHeaders.LOCATION);
-
-        return location.substring(location.lastIndexOf('/') + 1);
-    }
-
-    private void createProjectWithKey(final String token) {
-        final CreateProjectRequest request = new CreateProjectRequest().key("TEST").name("Test Project");
-
-        given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(request)
-                .post("/projects");
-    }
-
     @Test
     void givenValidIssueKey_whenGetIssueByKey_thenReturns200WithDetails() {
         registerUser("user@example.com", "password", "John", "Doe");
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        final String issueKey = createIssue(token, "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(token, "XIRA", "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -1062,7 +1007,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String developerId = getUserIdByEmail(ownerToken, "developer@example.com");
         addProjectMember(ownerToken, developerId, ProjectMemberRole.DEVELOPER);
 
-        final String issueKey = createIssue(ownerToken, "Test Issue", CreateIssueRequest.IssueTypeEnum.TASK);
+        final String issueKey = createIssue(ownerToken, "XIRA", "Test Issue", CreateIssueRequest.IssueTypeEnum.TASK);
 
         final AddAssigneeRequest request = new AddAssigneeRequest().userId(UUID.fromString(developerId));
         given().contentType(ContentType.JSON)
@@ -1086,9 +1031,9 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        final String issueKey = createIssue(token, "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(token, "XIRA", "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
-        final String doneStatusId = getDoneStatusId(token);
+        final String doneStatusId = getWorkflowStatusId(token, "Done");
         final SetIssueStatusRequest statusRequest = new SetIssueStatusRequest().statusId(UUID.fromString(doneStatusId));
         given().contentType(ContentType.JSON)
                 .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
@@ -1142,7 +1087,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String ownerToken = login("owner@example.com", "password");
         createProject(ownerToken);
 
-        final String issueKey = createIssue(ownerToken, "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(ownerToken, "XIRA", "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
         registerUser("nonmember@example.com", "password", "Non", "Member");
         final String nonMemberToken = login("nonmember@example.com", "password");
@@ -1184,7 +1129,7 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
         final String token = login("user@example.com", "password");
         createProject(token);
 
-        final String issueKey = createIssue(token, "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey = createIssue(token, "XIRA", "Test Issue", CreateIssueRequest.IssueTypeEnum.BUG);
 
         final AddCommentRequest comment1 = new AddCommentRequest().content("First comment");
         given().contentType(ContentType.JSON)

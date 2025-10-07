@@ -173,14 +173,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     private String prepareProjectOwner() {
-        registerUser(OWNER_EMAIL, OWNER_PASSWORD, "Owner", "User");
-        final String ownerToken = login(OWNER_EMAIL, OWNER_PASSWORD);
-        createProject(ownerToken);
-        return ownerToken;
-    }
-
-    private String bearer(final String token) {
-        return String.format("Bearer %s", token);
+        return prepareProjectOwner(OWNER_EMAIL, OWNER_PASSWORD);
     }
 
     private String createSprint(final String token) {
@@ -193,7 +186,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .statusCode(201)
                 .extract()
                 .header(HttpHeaders.LOCATION);
-        return location.substring(location.lastIndexOf('/') + 1);
+        return extractIdFromLocation(location);
     }
 
     private void startSprint(final String token, final String sprintId) {
