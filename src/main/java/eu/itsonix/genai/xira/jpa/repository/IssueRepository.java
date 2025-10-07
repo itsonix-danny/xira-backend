@@ -18,6 +18,10 @@ public interface IssueRepository extends JpaRepository<Issue, String>, JpaSpecif
 
     Optional<Issue> findByKeyAndProjectKeyIgnoreCase(final String key, final String projectKey);
 
+    @EntityGraph(attributePaths = { "status", "reporter", "issueAssignees", "issueAssignees.xiraUser", "sprintIssues",
+            "sprintIssues.sprint", "comments", "comments.author" })
+    Optional<Issue> findWithDetailsByKeyAndProjectKeyIgnoreCase(final String key, final String projectKey);
+
     @Query("SELECT COALESCE(MAX(i.seqNo), 0) FROM Issue i WHERE i.projectId = :projectId")
     Integer findMaxSeqNoByProjectId(final String projectId);
 

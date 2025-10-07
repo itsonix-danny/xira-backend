@@ -17,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = { "issueAssignees", "sprintIssues" })
+@ToString(exclude = { "issueAssignees", "sprintIssues", "comments" })
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -78,6 +78,10 @@ public class Issue {
     @OneToMany(mappedBy = "issue", fetch = FetchType.LAZY)
     @Builder.Default
     private Set<SprintIssue> sprintIssues = new HashSet<>();
+
+    @OneToMany(mappedBy = "issue", fetch = FetchType.LAZY)
+    @Builder.Default
+    private Set<IssueComment> comments = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false)

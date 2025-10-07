@@ -74,6 +74,14 @@ public class IssueService {
             issue.setDescription(updateIssueRequest.getDescription());
         }
 
+        if (updateIssueRequest.getIssueType() != null) {
+            issue.setIssueType(IssueType.valueOf(updateIssueRequest.getIssueType().name()));
+        }
+
+        if (updateIssueRequest.getPriority() != null) {
+            issue.setPriority(IssuePriority.valueOf(updateIssueRequest.getPriority().name()));
+        }
+
         issueRepository.save(issue);
     }
 
@@ -174,5 +182,13 @@ public class IssueService {
                 .sorted(Comparator.comparing(Issue::getSeqNo))
                 .map(IssueMapper::toIssueSummaryResponse)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public IssueDetailsResponse getIssueDetails(final String projectKey, final String issueKey) {
+        final Issue issue = issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        return IssueMapper.toIssueDetailsResponse(issue);
     }
 }

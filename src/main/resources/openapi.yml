@@ -751,11 +751,46 @@ paths:
           $ref: '#/components/responses/Problem'
 
   /projects/{key}/issues/{issueKey}:
+    get:
+      tags: [ Issues ]
+      operationId: getIssueByKey
+      summary: Get issue details
+      description: 'Returns detailed information about a specific issue.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key (e.g., XIRA-1)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Issue details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueDetailsResponse'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
     patch:
       tags: [ Issues ]
       operationId: updateIssue
       summary: Update an existing issue
-      description: 'Updates title and/or description of an existing issue.'
+      description: 'Updates title, description, issue type, and/or priority of an existing issue.'
       security:
         - BearerAuth: [ ]
       parameters:
@@ -1705,6 +1740,14 @@ components:
           type: string
           description: Issue description
           maxLength: 5000
+        issueType:
+          type: string
+          description: Type of issue
+          enum: [ BUG, TASK, STORY ]
+        priority:
+          type: string
+          description: Issue priority
+          enum: [ LOW, MEDIUM, HIGH, CRITICAL ]
 
     AddAssigneeRequest:
       type: object
@@ -1747,3 +1790,77 @@ components:
           description: Comment content
           minLength: 1
           maxLength: 5000
+
+    IssueDetailsResponse:
+      type: object
+      additionalProperties: false
+      required: [ key, title, issueType, status, priority, assignees, reporter, createdAt, comments ]
+      properties:
+        key:
+          type: string
+          description: Unique issue key (e.g., XIRA-1)
+        title:
+          type: string
+          description: Issue title
+        description:
+          type: string
+          description: Issue description
+          nullable: true
+        issueType:
+          type: string
+          description: Type of issue
+          enum: [ BUG, TASK, STORY ]
+        status:
+          $ref: '#/components/schemas/WorkflowStatusResponse'
+        priority:
+          type: string
+          description: Issue priority
+          enum: [ LOW, MEDIUM, HIGH, CRITICAL ]
+        assignees:
+          type: array
+          description: List of users assigned to this issue
+          items:
+            $ref: '#/components/schemas/UserResponse'
+        sprintName:
+          type: string
+          description: Name of the sprint this issue is assigned to
+          nullable: true
+        reporter:
+          $ref: '#/components/schemas/UserResponse'
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the issue was created
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp when the issue was closed
+        comments:
+          type: array
+          description: List of comments on this issue
+          items:
+            $ref: '#/components/schemas/CommentResponse'
+
+    CommentResponse:
+      type: object
+      additionalProperties: false
+      required: [ id, author, content, createdAt, updatedAt ]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Comment identifier
+        author:
+          $ref: '#/components/schemas/UserResponse'
+        content:
+          type: string
+          description: Comment content
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when the comment was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp when the comment was last updated

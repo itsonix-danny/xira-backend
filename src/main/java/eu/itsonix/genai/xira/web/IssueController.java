@@ -29,6 +29,12 @@ public class IssueController implements IssuesApi {
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<IssueDetailsResponse> getIssueByKey(final String key, final String issueKey) {
+        return ResponseEntity.ok(issueService.getIssueDetails(key, issueKey));
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
     public ResponseEntity<Void> createIssue(final String key, final CreateIssueRequest createIssueRequest) {
         final String issueKey = issueService.createIssue(key, createIssueRequest);
         return ResponseEntity.created(URI.create(String.format("/projects/%s/issues/%s", key, issueKey))).build();

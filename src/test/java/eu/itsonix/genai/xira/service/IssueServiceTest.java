@@ -3,6 +3,7 @@ package eu.itsonix.genai.xira.service;
 import jakarta.persistence.EntityNotFoundException;
 
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -64,7 +65,7 @@ class IssueServiceTest {
         final Project project = Project.builder().id(projectId).key(projectKey).name("Xira").build();
         final XiraUser reporter = XiraUser.builder().id(userId).email("user@example.com").build();
         final WorkflowStatus defaultStatus = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .statusOrder(1)
@@ -96,7 +97,7 @@ class IssueServiceTest {
         final Project project = Project.builder().id(projectId).key(projectKey).name("Xira").build();
         final XiraUser reporter = XiraUser.builder().id(userId).email("user@example.com").build();
         final WorkflowStatus defaultStatus = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .statusOrder(1)
@@ -126,7 +127,7 @@ class IssueServiceTest {
         final Project project = Project.builder().id(projectId).key(projectKey).name("Xira").build();
         final XiraUser reporter = XiraUser.builder().id(userId).email("user@example.com").build();
         final WorkflowStatus defaultStatus = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .statusOrder(1)
@@ -229,6 +230,81 @@ class IssueServiceTest {
         assertThatThrownBy(() -> issueService.updateIssue("WRONG", issueKey, request))
                 .isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Issue not found");
+    }
+
+    @Test
+    void givenPriorityUpdate_whenUpdateIssue_thenUpdatesPriority() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Project project = Project.builder().id("project-id").key(projectKey).name("Xira").build();
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .project(project)
+                .priority(IssuePriority.LOW)
+                .build();
+
+        final UpdateIssueRequest request = new UpdateIssueRequest().priority(UpdateIssueRequest.PriorityEnum.HIGH);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)).thenReturn(Optional.of(issue));
+
+        issueService.updateIssue(projectKey, issueKey, request);
+
+        assertThat(issue.getPriority()).isEqualTo(IssuePriority.HIGH);
+        verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void givenIssueTypeUpdate_whenUpdateIssue_thenUpdatesIssueType() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Project project = Project.builder().id("project-id").key(projectKey).name("Xira").build();
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .project(project)
+                .issueType(IssueType.TASK)
+                .build();
+
+        final UpdateIssueRequest request = new UpdateIssueRequest().issueType(UpdateIssueRequest.IssueTypeEnum.BUG);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)).thenReturn(Optional.of(issue));
+
+        issueService.updateIssue(projectKey, issueKey, request);
+
+        assertThat(issue.getIssueType()).isEqualTo(IssueType.BUG);
+        verify(issueRepository).save(issue);
+    }
+
+    @Test
+    void givenAllFieldsUpdate_whenUpdateIssue_thenUpdatesAllFields() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Project project = Project.builder().id("project-id").key(projectKey).name("Xira").build();
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .project(project)
+                .title("Old Title")
+                .description("Old Description")
+                .issueType(IssueType.TASK)
+                .priority(IssuePriority.LOW)
+                .build();
+
+        final UpdateIssueRequest request = new UpdateIssueRequest().title("New Title")
+                .description("New Description")
+                .issueType(UpdateIssueRequest.IssueTypeEnum.STORY)
+                .priority(UpdateIssueRequest.PriorityEnum.CRITICAL);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)).thenReturn(Optional.of(issue));
+
+        issueService.updateIssue(projectKey, issueKey, request);
+
+        assertThat(issue.getTitle()).isEqualTo("New Title");
+        assertThat(issue.getDescription()).isEqualTo("New Description");
+        assertThat(issue.getIssueType()).isEqualTo(IssueType.STORY);
+        assertThat(issue.getPriority()).isEqualTo(IssuePriority.CRITICAL);
+        verify(issueRepository).save(issue);
     }
 
     @Test
@@ -518,7 +594,7 @@ class IssueServiceTest {
         final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -566,7 +642,7 @@ class IssueServiceTest {
         final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -600,7 +676,7 @@ class IssueServiceTest {
         final XiraUser assignee = XiraUser.builder().id(assigneeId).email("assignee@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -683,7 +759,7 @@ class IssueServiceTest {
         final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -716,7 +792,7 @@ class IssueServiceTest {
         final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -748,7 +824,7 @@ class IssueServiceTest {
         final XiraUser user = XiraUser.builder().id(userId).email("user@example.com").build();
         final Project project = Project.builder().id("project-id").key("XIRA").build();
         final WorkflowStatus status = WorkflowStatus.builder()
-                .id("status-id")
+                .id("550e8400-e29b-41d4-a716-446655440100")
                 .name("To Do")
                 .category(WorkflowStatusCategory.TODO)
                 .build();
@@ -798,5 +874,305 @@ class IssueServiceTest {
         assertThat(result.getFirst().getKey()).isEqualTo("XIRA-1");
         assertThat(result.get(1).getKey()).isEqualTo("XIRA-2");
         assertThat(result.get(2).getKey()).isEqualTo("XIRA-3");
+    }
+
+    @Test
+    void givenValidIssueKey_whenGetIssueDetails_thenReturnsIssueDetails() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String userId = "550e8400-e29b-41d4-a716-446655440000";
+        final Instant createdAt = Instant.now().minusSeconds(3600);
+
+        final Project project = Project.builder().id("project-id").key(projectKey).build();
+        final Workflow workflow = Workflow.builder().id("workflow-id").project(project).build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("550e8400-e29b-41d4-a716-446655440100")
+                .name("In Progress")
+                .category(WorkflowStatusCategory.IN_PROGRESS)
+                .workflow(workflow)
+                .build();
+        final XiraUser reporter = XiraUser.builder()
+                .id(userId)
+                .email("reporter@example.com")
+                .firstName("John")
+                .lastName("Doe")
+                .build();
+
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .title("Test Issue")
+                .description("Test Description")
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.HIGH)
+                .reporter(reporter)
+                .createdAt(createdAt)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .sprintIssues(Set.of())
+                .build();
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        final IssueDetailsResponse result = issueService.getIssueDetails(projectKey, issueKey);
+
+        assertThat(result.getKey()).isEqualTo(issueKey);
+        assertThat(result.getTitle()).isEqualTo("Test Issue");
+        assertThat(result.getDescription()).isEqualTo("Test Description");
+        assertThat(result.getStatus().getName()).isEqualTo("In Progress");
+        assertThat(result.getStatus().getCategory()).isEqualTo(WorkflowStatusResponse.CategoryEnum.IN_PROGRESS);
+        assertThat(result.getReporter().getEmail()).isEqualTo("reporter@example.com");
+        assertThat(result.getCreatedAt()).isNotNull();
+        assertThat(result.getClosedAt()).isNull();
+        assertThat(result.getSprintName()).isNull();
+    }
+
+    @Test
+    void givenIssueWithSprint_whenGetIssueDetails_thenReturnsSprintName() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Instant createdAt = Instant.now().minusSeconds(3600);
+
+        final Project project = Project.builder().id("project-id").key(projectKey).build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("550e8400-e29b-41d4-a716-446655440100")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+        final XiraUser reporter = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440001")
+                .email("reporter@example.com")
+                .firstName("Jane")
+                .lastName("Smith")
+                .build();
+        final Sprint sprint = Sprint.builder().id("sprint-id").name("Sprint 1").project(project).build();
+
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .title("Test Issue")
+                .project(project)
+                .status(status)
+                .issueType(IssueType.TASK)
+                .priority(IssuePriority.MEDIUM)
+                .reporter(reporter)
+                .createdAt(createdAt)
+                .closedAt(null)
+                .issueAssignees(Set.of())
+                .sprintIssues(Set.of(SprintIssue.builder().sprintId("sprint-id").issueId("issue-id").sprint(sprint)
+                        .build()))
+                .build();
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        final IssueDetailsResponse result = issueService.getIssueDetails(projectKey, issueKey);
+
+        assertThat(result.getSprintName()).isEqualTo("Sprint 1");
+    }
+
+    @Test
+    void givenClosedIssue_whenGetIssueDetails_thenReturnsClosedAt() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Instant createdAt = Instant.now().minusSeconds(7200);
+        final Instant closedAt = Instant.now().minusSeconds(1800);
+
+        final Project project = Project.builder().id("project-id").key(projectKey).build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("550e8400-e29b-41d4-a716-446655440100")
+                .name("Done")
+                .category(WorkflowStatusCategory.DONE)
+                .build();
+        final XiraUser reporter = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440002")
+                .email("reporter@example.com")
+                .firstName("Alice")
+                .lastName("Brown")
+                .build();
+
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .title("Closed Issue")
+                .project(project)
+                .status(status)
+                .issueType(IssueType.BUG)
+                .priority(IssuePriority.CRITICAL)
+                .reporter(reporter)
+                .createdAt(createdAt)
+                .closedAt(closedAt)
+                .issueAssignees(Set.of())
+                .sprintIssues(Set.of())
+                .build();
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        final IssueDetailsResponse result = issueService.getIssueDetails(projectKey, issueKey);
+
+        assertThat(result.getClosedAt()).isNotNull();
+        assertThat(result.getStatus().getCategory()).isEqualTo(WorkflowStatusResponse.CategoryEnum.DONE);
+    }
+
+    @Test
+    void givenIssueWithAssignees_whenGetIssueDetails_thenReturnsAssignees() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Instant createdAt = Instant.now().minusSeconds(3600);
+
+        final Project project = Project.builder().id("project-id").key(projectKey).build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("550e8400-e29b-41d4-a716-446655440100")
+                .name("To Do")
+                .category(WorkflowStatusCategory.TODO)
+                .build();
+        final XiraUser reporter = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440003")
+                .email("reporter@example.com")
+                .firstName("Bob")
+                .lastName("Wilson")
+                .build();
+        final XiraUser assignee1 = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440004")
+                .email("assignee1@example.com")
+                .firstName("Alice")
+                .lastName("Cooper")
+                .build();
+        final XiraUser assignee2 = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440005")
+                .email("assignee2@example.com")
+                .firstName("Charlie")
+                .lastName("Davis")
+                .build();
+
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .title("Issue with Assignees")
+                .project(project)
+                .status(status)
+                .issueType(IssueType.STORY)
+                .priority(IssuePriority.LOW)
+                .reporter(reporter)
+                .createdAt(createdAt)
+                .closedAt(null)
+                .issueAssignees(Set.of(IssueAssignee.builder()
+                        .issueId("issue-id")
+                        .userId("550e8400-e29b-41d4-a716-446655440004")
+                        .xiraUser(assignee1)
+                        .build(), IssueAssignee.builder()
+                        .issueId("issue-id")
+                        .userId("550e8400-e29b-41d4-a716-446655440005")
+                        .xiraUser(assignee2)
+                        .build()))
+                .sprintIssues(Set.of())
+                .build();
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        final IssueDetailsResponse result = issueService.getIssueDetails(projectKey, issueKey);
+
+        assertThat(result.getAssignees()).hasSize(2);
+        assertThat(result.getAssignees().getFirst().getFirstName()).isEqualTo("Alice");
+    }
+
+    @Test
+    void givenInvalidIssueKey_whenGetIssueDetails_thenThrowsEntityNotFoundException() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-999";
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.getIssueDetails(projectKey, issueKey))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Issue not found");
+    }
+
+    @Test
+    void givenIssueWithComments_whenGetIssueDetails_thenReturnsComments() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final Instant createdAt = Instant.now().minusSeconds(3600);
+        final Instant comment1CreatedAt = Instant.now().minusSeconds(1800);
+        final Instant comment2CreatedAt = Instant.now().minusSeconds(900);
+
+        final Project project = Project.builder().id("project-id").key(projectKey).build();
+        final WorkflowStatus status = WorkflowStatus.builder()
+                .id("550e8400-e29b-41d4-a716-446655440100")
+                .name("In Progress")
+                .category(WorkflowStatusCategory.IN_PROGRESS)
+                .build();
+        final XiraUser reporter = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440001")
+                .email("reporter@example.com")
+                .firstName("Reporter")
+                .lastName("User")
+                .build();
+        final XiraUser commenter1 = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440002")
+                .email("commenter1@example.com")
+                .firstName("Commenter")
+                .lastName("One")
+                .build();
+        final XiraUser commenter2 = XiraUser.builder()
+                .id("550e8400-e29b-41d4-a716-446655440003")
+                .email("commenter2@example.com")
+                .firstName("Commenter")
+                .lastName("Two")
+                .build();
+
+        final Issue issue = Issue.builder()
+                .id("issue-id")
+                .key(issueKey)
+                .project(project)
+                .status(status)
+                .priority(IssuePriority.HIGH)
+                .issueType(IssueType.BUG)
+                .reporter(reporter)
+                .title("Test Issue")
+                .description("Test Description")
+                .createdAt(createdAt)
+                .issueAssignees(new HashSet<>())
+                .sprintIssues(new HashSet<>())
+                .comments(new HashSet<>())
+                .build();
+
+        final IssueComment comment1 = IssueComment.builder()
+                .id("550e8400-e29b-41d4-a716-446655440010")
+                .issue(issue)
+                .author(commenter1)
+                .content("First comment")
+                .createdAt(comment1CreatedAt)
+                .updatedAt(comment1CreatedAt)
+                .build();
+
+        final IssueComment comment2 = IssueComment.builder()
+                .id("550e8400-e29b-41d4-a716-446655440011")
+                .issue(issue)
+                .author(commenter2)
+                .content("Second comment")
+                .createdAt(comment2CreatedAt)
+                .updatedAt(comment2CreatedAt)
+                .build();
+
+        issue.getComments().add(comment1);
+        issue.getComments().add(comment2);
+
+        when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        final IssueDetailsResponse result = issueService.getIssueDetails(projectKey, issueKey);
+
+        assertThat(result.getComments()).hasSize(2);
+        assertThat(result.getComments().getFirst().getContent()).isEqualTo("First comment");
+        assertThat(result.getComments().getFirst().getAuthor().getFirstName()).isEqualTo("Commenter");
+        assertThat(result.getComments().get(1).getContent()).isEqualTo("Second comment");
+        assertThat(result.getComments().get(1).getAuthor().getFirstName()).isEqualTo("Commenter");
     }
 }
