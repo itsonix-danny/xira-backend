@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
+import eu.itsonix.genai.xira.web.model.CreateIssueRequest;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
 import io.restassured.http.ContentType;
 
@@ -108,7 +109,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenPlannedSprint_whenStartSprint_thenReturnsActive() {
+    void givenPlannedSprint_whenStartSprint_thenReturnsNoContent() {
         final String ownerToken = prepareProjectOwner();
         final String sprintId = createSprint(ownerToken);
 
@@ -117,11 +118,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .post("/projects/{key}/sprints/{sprintId}/start", PROJECT_KEY, UUID.fromString(sprintId))
                 .then()
-                .statusCode(200)
-                .body("state", equalTo("ACTIVE"))
-                .body("startedAt", notNullValue())
-                .body("finishedAt", nullValue())
-                .body("createdAt", notNullValue());
+                .statusCode(204);
     }
 
     @Test
@@ -141,7 +138,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenActiveSprint_whenFinishSprint_thenReturnsClosed() {
+    void givenActiveSprint_whenFinishSprint_thenReturnsNoContent() {
         final String ownerToken = prepareProjectOwner();
         final String sprintId = createSprint(ownerToken);
         startSprint(ownerToken, sprintId);
@@ -151,11 +148,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .post("/projects/{key}/sprints/{sprintId}/finish", PROJECT_KEY, UUID.fromString(sprintId))
                 .then()
-                .statusCode(200)
-                .body("state", equalTo("CLOSED"))
-                .body("startedAt", notNullValue())
-                .body("finishedAt", notNullValue())
-                .body("createdAt", notNullValue());
+                .statusCode(204);
     }
 
     @Test
@@ -195,7 +188,7 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .post("/projects/{key}/sprints/{sprintId}/start", PROJECT_KEY, UUID.fromString(sprintId))
                 .then()
-                .statusCode(200);
+                .statusCode(204);
     }
 
     private void finishSprint(final String token, final String sprintId) {
@@ -204,6 +197,220 @@ class SprintControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .post("/projects/{key}/sprints/{sprintId}/finish", PROJECT_KEY, UUID.fromString(sprintId))
                 .then()
-                .statusCode(200);
+                .statusCode(204);
+    }
+
+    @Test
+    void givenProjectMemberAndIssue_whenAddIssueToSprint_thenReturnsCreated() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(201);
+    }
+
+    @Test
+    void givenFinishedSprint_whenAddIssueToSprint_thenReturnsConflict() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+        startSprint(ownerToken, sprintId);
+        finishSprint(ownerToken, sprintId);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(409)
+                .body("detail", equalTo("Cannot add issues to a finished sprint"));
+    }
+
+    @Test
+    void givenNonExistentIssue_whenAddIssueToSprint_thenReturnsNotFound() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        "XIRA-99")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenIssueAlreadyInSprint_whenAddIssueToSprint_thenReturnsConflict() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(409)
+                .body("detail", equalTo("Issue is already in this sprint"));
+    }
+
+    @Test
+    void givenNonMember_whenAddIssueToSprint_thenReturnsForbidden() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        registerUser("nonmember@example.com", OWNER_PASSWORD, "Non", "Member");
+        final String nonMemberToken = login("nonmember@example.com", OWNER_PASSWORD);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(nonMemberToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenIssueInSprint_whenAddIssueToAnotherSprint_thenMovesIssue() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprint1Id = createSprint(ownerToken);
+
+        final String sprint2Location = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .body(new AddSprintRequest().name("Sprint 2").goal("Second sprint"))
+                .when()
+                .post("/projects/{key}/sprints", PROJECT_KEY)
+                .then()
+                .statusCode(201)
+                .extract()
+                .header(HttpHeaders.LOCATION);
+        final String sprint2Id = extractIdFromLocation(sprint2Location);
+
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprint1Id),
+                        issueKey)
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprint2Id),
+                        issueKey)
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .delete("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprint1Id),
+                        issueKey)
+                .then()
+                .statusCode(404)
+                .body("detail", equalTo("Issue is not in this sprint"));
+    }
+
+    @Test
+    void givenProjectMemberAndIssueInSprint_whenRemoveIssueFromSprint_thenReturnsNoContent() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(201);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .delete("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void givenFinishedSprint_whenRemoveIssueFromSprint_thenReturnsConflict() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .post("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(201);
+
+        startSprint(ownerToken, sprintId);
+        finishSprint(ownerToken, sprintId);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .delete("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(409)
+                .body("detail", equalTo("Cannot remove issues from a finished sprint"));
+    }
+
+    @Test
+    void givenIssueNotInSprint_whenRemoveIssueFromSprint_thenReturnsNotFound() {
+        final String ownerToken = prepareProjectOwner();
+        final String sprintId = createSprint(ownerToken);
+        final String issueKey = createIssue(ownerToken);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(ownerToken))
+                .when()
+                .delete("/projects/{key}/sprints/{sprintId}/issues/{issueKey}", PROJECT_KEY, UUID.fromString(sprintId),
+                        issueKey)
+                .then()
+                .statusCode(404)
+                .body("detail", equalTo("Issue is not in this sprint"));
+    }
+
+    private String createIssue(final String token) {
+        final String location = given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, bearer(token))
+                .body(new CreateIssueRequest().title("Test Issue")
+                        .issueType(CreateIssueRequest.IssueTypeEnum.TASK)
+                        .priority(CreateIssueRequest.PriorityEnum.MEDIUM))
+                .when()
+                .post("/projects/{key}/issues", PROJECT_KEY)
+                .then()
+                .statusCode(201)
+                .extract()
+                .header(HttpHeaders.LOCATION);
+        return location.substring(location.lastIndexOf('/') + 1);
     }
 }

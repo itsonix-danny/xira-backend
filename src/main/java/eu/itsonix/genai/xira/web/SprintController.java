@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import eu.itsonix.genai.xira.service.SprintService;
 import eu.itsonix.genai.xira.web.api.SprintsApi;
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
-import eu.itsonix.genai.xira.web.model.SprintResponse;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
 
 @RestController
@@ -25,8 +24,7 @@ public class SprintController implements SprintsApi {
     @PreAuthorize("@authService.isProjectMember(#key)")
     public ResponseEntity<Void> createSprint(final String key, final AddSprintRequest addSprintRequest) {
         final String sprintId = sprintService.createSprint(key, addSprintRequest);
-        return ResponseEntity
-                .created(URI.create(String.format("/projects/%s/sprints/%s", key, sprintId))).build();
+        return ResponseEntity.created(URI.create(String.format("/projects/%s/sprints/%s", key, sprintId))).build();
     }
 
     @Override
@@ -46,15 +44,29 @@ public class SprintController implements SprintsApi {
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")
-    public ResponseEntity<SprintResponse> startSprint(final String key, final UUID sprintId) {
-        final SprintResponse sprint = sprintService.startSprint(key, sprintId.toString());
-        return ResponseEntity.ok(sprint);
+    public ResponseEntity<Void> startSprint(final String key, final UUID sprintId) {
+        sprintService.startSprint(key, sprintId.toString());
+        return ResponseEntity.noContent().build();
     }
 
     @Override
     @PreAuthorize("@authService.isProjectMember(#key)")
-    public ResponseEntity<SprintResponse> finishSprint(final String key, final UUID sprintId) {
-        final SprintResponse sprint = sprintService.finishSprint(key, sprintId.toString());
-        return ResponseEntity.ok(sprint);
+    public ResponseEntity<Void> finishSprint(final String key, final UUID sprintId) {
+        sprintService.finishSprint(key, sprintId.toString());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<Void> addIssueToSprint(final String key, final UUID sprintId, final String issueKey) {
+        sprintService.addIssueToSprint(key, sprintId.toString(), issueKey);
+        return ResponseEntity.status(201).build();
+    }
+
+    @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
+    public ResponseEntity<Void> removeIssueFromSprint(final String key, final UUID sprintId, final String issueKey) {
+        sprintService.removeIssueFromSprint(key, sprintId.toString(), issueKey);
+        return ResponseEntity.noContent().build();
     }
 }

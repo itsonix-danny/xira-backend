@@ -78,8 +78,8 @@ abstract class BaseIntegrationTest {
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         issueCommentRepository.deleteAll();
         issueAssigneeRepository.deleteAll();
-        issueRepository.deleteAll();
         sprintIssueRepository.deleteAll();
+        issueRepository.deleteAll();
         sprintRepository.deleteAll();
         boardColumnWorkflowStatusRepository.deleteAll();
         boardColumnRepository.deleteAll();

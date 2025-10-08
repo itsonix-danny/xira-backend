@@ -14,11 +14,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
+import eu.itsonix.genai.xira.jpa.repository.IssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintIssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintRepository;
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
-import eu.itsonix.genai.xira.web.model.SprintResponse;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +40,9 @@ class SprintServiceTest {
 
     @Mock
     private SprintIssueRepository sprintIssueRepository;
+
+    @Mock
+    private IssueRepository issueRepository;
 
     @InjectMocks
     private SprintService sprintService;
@@ -153,11 +156,9 @@ class SprintServiceTest {
                 .thenReturn(Optional.of(sprint));
         when(sprintRepository.existsByProjectIdAndStateAndIdNot(PROJECT_ID, SprintState.ACTIVE, sprint.getId()))
                 .thenReturn(false);
-        when(sprintRepository.save(sprint)).thenReturn(sprint);
 
-        final SprintResponse response = sprintService.startSprint(PROJECT_KEY, sprint.getId());
+        sprintService.startSprint(PROJECT_KEY, sprint.getId());
 
-        assertThat(response.getState()).isEqualTo(eu.itsonix.genai.xira.web.model.SprintState.ACTIVE);
         assertThat(sprint.getState()).isEqualTo(SprintState.ACTIVE);
         assertThat(sprint.getStartedAt()).isNotNull();
         assertThat(sprint.getFinishedAt()).isNull();
@@ -209,11 +210,9 @@ class SprintServiceTest {
 
         when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
                 .thenReturn(Optional.of(sprint));
-        when(sprintRepository.save(sprint)).thenReturn(sprint);
 
-        final SprintResponse response = sprintService.finishSprint(PROJECT_KEY, sprint.getId());
+        sprintService.finishSprint(PROJECT_KEY, sprint.getId());
 
-        assertThat(response.getState()).isEqualTo(eu.itsonix.genai.xira.web.model.SprintState.CLOSED);
         assertThat(sprint.getState()).isEqualTo(SprintState.CLOSED);
         assertThat(sprint.getFinishedAt()).isNotNull();
         verify(sprintIssueRepository, times(1)).deleteAllBySprintIdAndIssue_Status_CategoryNot(sprint.getId(),
@@ -227,7 +226,6 @@ class SprintServiceTest {
 
         when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
                 .thenReturn(Optional.of(sprint));
-        when(sprintRepository.save(sprint)).thenReturn(sprint);
 
         sprintService.finishSprint(PROJECT_KEY, sprint.getId());
 
@@ -258,6 +256,119 @@ class SprintServiceTest {
                 .build();
     }
 
+    @Test
+    void givenPlannedSprintAndIssue_whenAddIssueToSprint_thenAddsIssue() {
+        final Sprint sprint = plannedSprint();
+        final Issue issue = createIssue();
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase("XIRA-1", PROJECT_KEY)).thenReturn(Optional.of(issue));
+        when(sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())).thenReturn(false);
+
+        sprintService.addIssueToSprint(PROJECT_KEY, sprint.getId(), "XIRA-1");
+
+        verify(sprintIssueRepository).deleteAllByIssueId(issue.getId());
+        final ArgumentCaptor<SprintIssue> captor = ArgumentCaptor.forClass(SprintIssue.class);
+        verify(sprintIssueRepository).save(captor.capture());
+        assertThat(captor.getValue().getSprintId()).isEqualTo(sprint.getId());
+        assertThat(captor.getValue().getIssueId()).isEqualTo(issue.getId());
+    }
+
+    @Test
+    void givenClosedSprint_whenAddIssueToSprint_thenThrowsIllegalState() {
+        final Sprint sprint = plannedSprint();
+        sprint.setState(SprintState.CLOSED);
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+
+        assertThatThrownBy(() -> sprintService.addIssueToSprint(PROJECT_KEY, sprint.getId(), "XIRA-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot add issues to a finished sprint");
+
+        verify(sprintIssueRepository, never()).save(any(SprintIssue.class));
+    }
+
+    @Test
+    void givenNonExistentIssue_whenAddIssueToSprint_thenThrowsEntityNotFound() {
+        final Sprint sprint = plannedSprint();
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase("XIRA-99", PROJECT_KEY)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> sprintService.addIssueToSprint(PROJECT_KEY, sprint.getId(), "XIRA-99"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Issue not found");
+
+        verify(sprintIssueRepository, never()).save(any(SprintIssue.class));
+    }
+
+    @Test
+    void givenIssueAlreadyInSprint_whenAddIssueToSprint_thenThrowsIllegalState() {
+        final Sprint sprint = plannedSprint();
+        final Issue issue = createIssue();
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase("XIRA-1", PROJECT_KEY)).thenReturn(Optional.of(issue));
+        when(sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())).thenReturn(true);
+
+        assertThatThrownBy(() -> sprintService.addIssueToSprint(PROJECT_KEY, sprint.getId(), "XIRA-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Issue is already in this sprint");
+
+        verify(sprintIssueRepository, never()).save(any(SprintIssue.class));
+    }
+
+    @Test
+    void givenPlannedSprintAndIssueInSprint_whenRemoveIssueFromSprint_thenRemovesIssue() {
+        final Sprint sprint = plannedSprint();
+        final Issue issue = createIssue();
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase("XIRA-1", PROJECT_KEY)).thenReturn(Optional.of(issue));
+        when(sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())).thenReturn(true);
+
+        sprintService.removeIssueFromSprint(PROJECT_KEY, sprint.getId(), "XIRA-1");
+
+        verify(sprintIssueRepository).deleteBySprintIdAndIssueId(sprint.getId(), issue.getId());
+    }
+
+    @Test
+    void givenClosedSprint_whenRemoveIssueFromSprint_thenThrowsIllegalState() {
+        final Sprint sprint = plannedSprint();
+        sprint.setState(SprintState.CLOSED);
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+
+        assertThatThrownBy(() -> sprintService.removeIssueFromSprint(PROJECT_KEY, sprint.getId(), "XIRA-1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot remove issues from a finished sprint");
+
+        verify(sprintIssueRepository, never()).deleteBySprintIdAndIssueId(any(), any());
+    }
+
+    @Test
+    void givenIssueNotInSprint_whenRemoveIssueFromSprint_thenThrowsEntityNotFound() {
+        final Sprint sprint = plannedSprint();
+        final Issue issue = createIssue();
+
+        when(sprintRepository.findByProject_KeyIgnoreCaseAndId(PROJECT_KEY, sprint.getId()))
+                .thenReturn(Optional.of(sprint));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase("XIRA-1", PROJECT_KEY)).thenReturn(Optional.of(issue));
+        when(sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())).thenReturn(false);
+
+        assertThatThrownBy(() -> sprintService.removeIssueFromSprint(PROJECT_KEY, sprint.getId(), "XIRA-1"))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Issue is not in this sprint");
+
+        verify(sprintIssueRepository, never()).deleteBySprintIdAndIssueId(any(), any());
+    }
+
     private Project project() {
         final XiraUser owner = XiraUser.builder()
                 .id("owner-id")
@@ -267,5 +378,17 @@ class SprintServiceTest {
                 .passwordHash("hash")
                 .build();
         return Project.builder().id(PROJECT_ID).key(PROJECT_KEY).name("Xira").owner(owner).build();
+    }
+
+    private Issue createIssue() {
+        return Issue.builder()
+                .id(UUID.randomUUID().toString())
+                .key("XIRA-1")
+                .title("Test Issue")
+                .seqNo(1)
+                .issueType(IssueType.TASK)
+                .priority(IssuePriority.MEDIUM)
+                .projectId(PROJECT_ID)
+                .build();
     }
 }

@@ -13,4 +13,10 @@ public interface SprintIssueRepository extends JpaRepository<SprintIssue, Sprint
     void deleteAllBySprintId(final String sprintId);
 
     void deleteAllBySprintIdAndIssue_Status_CategoryNot(final String sprintId, final WorkflowStatusCategory category);
+
+    boolean existsBySprintIdAndIssueId(final String sprintId, final String issueId);
+
+    void deleteBySprintIdAndIssueId(final String sprintId, final String issueId);
+
+    void deleteAllByIssueId(final String issueId);
 }

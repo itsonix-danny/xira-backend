@@ -12,21 +12,14 @@ import eu.itsonix.genai.xira.jpa.entity.BoardColumn;
 import eu.itsonix.genai.xira.jpa.entity.Issue;
 import eu.itsonix.genai.xira.jpa.entity.Sprint;
 import eu.itsonix.genai.xira.jpa.entity.SprintIssue;
-import eu.itsonix.genai.xira.web.model.*;
+import eu.itsonix.genai.xira.web.model.ActiveSprintResponse;
+import eu.itsonix.genai.xira.web.model.BoardColumnResponse;
+import eu.itsonix.genai.xira.web.model.SprintState;
+import eu.itsonix.genai.xira.web.model.SprintWithIssuesResponse;
 
 public final class SprintMapper {
 
     private SprintMapper() {
-    }
-
-    public static SprintResponse toSprintResponse(final Sprint sprint) {
-        return new SprintResponse().id(UUID.fromString(sprint.getId()))
-                .name(sprint.getName())
-                .goal(sprint.getGoal())
-                .state(toSprintState(sprint.getState()))
-                .createdAt(toOffsetDateTime(sprint.getCreatedAt()))
-                .startedAt(toOffsetDateTime(sprint.getStartedAt()))
-                .finishedAt(toOffsetDateTime(sprint.getFinishedAt()));
     }
 
     public static SprintWithIssuesResponse toSprintWithIssuesResponse(final Sprint sprint) {
@@ -75,13 +68,6 @@ public final class SprintMapper {
                         .sorted(Comparator.comparing(Issue::getSeqNo))
                         .map(IssueMapper::toIssueSummaryResponse)
                         .toList());
-    }
-
-    private static SprintState toSprintState(final eu.itsonix.genai.xira.jpa.entity.SprintState state) {
-        if (state == null) {
-            return null;
-        }
-        return SprintState.fromValue(state.name());
     }
 
     private static OffsetDateTime toOffsetDateTime(final Instant instant) {

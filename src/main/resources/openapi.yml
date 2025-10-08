@@ -412,12 +412,8 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        '204':
           description: Sprint started successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SprintResponse'
         '400':
           $ref: '#/components/responses/Problem'
         '401':
@@ -454,14 +450,94 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        '204':
           description: Sprint finished successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SprintResponse'
         '400':
           $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/sprints/{sprintId}/issues/{issueKey}:
+    post:
+      tags: [ Sprints ]
+      operationId: addIssueToSprint
+      summary: Add an issue to a sprint
+      description: 'Adds an issue to a sprint. Only accessible by project members. Cannot add issues to finished sprints.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: sprintId
+          in: path
+          required: true
+          description: Sprint identifier
+          schema:
+            type: string
+            format: uuid
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key (e.g., XIRA-1)
+          schema:
+            type: string
+      responses:
+        '201':
+          description: Issue added to sprint successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+    delete:
+      tags: [ Sprints ]
+      operationId: removeIssueFromSprint
+      summary: Remove an issue from a sprint
+      description: 'Removes an issue from a sprint. Only accessible by project members. Cannot remove issues from finished sprints.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: sprintId
+          in: path
+          required: true
+          description: Sprint identifier
+          schema:
+            type: string
+            format: uuid
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key (e.g., XIRA-1)
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Issue removed from sprint successfully
         '401':
           $ref: '#/components/responses/Problem'
         '403':
@@ -1616,38 +1692,6 @@ components:
           description: Sprint goal
           minLength: 1
           maxLength: 200
-
-    SprintResponse:
-      type: object
-      additionalProperties: false
-      required: [ id, name, goal, state, createdAt ]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Sprint identifier
-        name:
-          type: string
-          description: Sprint name
-        goal:
-          type: string
-          description: Sprint goal
-        state:
-          $ref: '#/components/schemas/SprintState'
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the sprint was created
-        startedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the sprint was started
-        finishedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the sprint was finished
 
     SprintState:
       type: string

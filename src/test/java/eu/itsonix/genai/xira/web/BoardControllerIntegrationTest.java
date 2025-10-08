@@ -642,7 +642,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .when()
                 .post("/projects/XIRA/sprints/{sprintId}/start", UUID.fromString(sprintId))
                 .then()
-                .statusCode(200);
+                .statusCode(204);
 
         given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
                 .when()

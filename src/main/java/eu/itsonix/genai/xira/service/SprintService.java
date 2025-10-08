@@ -10,12 +10,11 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
+import eu.itsonix.genai.xira.jpa.repository.IssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintIssueRepository;
 import eu.itsonix.genai.xira.jpa.repository.SprintRepository;
-import eu.itsonix.genai.xira.mapper.SprintMapper;
 import eu.itsonix.genai.xira.web.model.AddSprintRequest;
-import eu.itsonix.genai.xira.web.model.SprintResponse;
 import eu.itsonix.genai.xira.web.model.UpdateSprintRequest;
 
 @Service
@@ -25,6 +24,7 @@ public class SprintService {
     private final ProjectRepository projectRepository;
     private final SprintRepository sprintRepository;
     private final SprintIssueRepository sprintIssueRepository;
+    private final IssueRepository issueRepository;
 
     @Transactional
     public String createSprint(final String projectKey, final AddSprintRequest addSprintRequest) {
@@ -74,7 +74,7 @@ public class SprintService {
     }
 
     @Transactional
-    public SprintResponse startSprint(final String projectKey, final String sprintId) {
+    public void startSprint(final String projectKey, final String sprintId) {
         final Sprint sprint = getSprintForProject(projectKey, sprintId);
 
         if (sprint.getState() == SprintState.CLOSED) {
@@ -94,11 +94,11 @@ public class SprintService {
         sprint.setStartedAt(Instant.now());
         sprint.setFinishedAt(null);
 
-        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
+        sprintRepository.save(sprint);
     }
 
     @Transactional
-    public SprintResponse finishSprint(final String projectKey, final String sprintId) {
+    public void finishSprint(final String projectKey, final String sprintId) {
         final Sprint sprint = getSprintForProject(projectKey, sprintId);
 
         if (sprint.getState() != SprintState.ACTIVE) {
@@ -111,7 +111,45 @@ public class SprintService {
         sprint.setState(SprintState.CLOSED);
         sprint.setFinishedAt(Instant.now());
 
-        return SprintMapper.toSprintResponse(sprintRepository.save(sprint));
+        sprintRepository.save(sprint);
+    }
+
+    @Transactional
+    public void addIssueToSprint(final String projectKey, final String sprintId, final String issueKey) {
+        final Sprint sprint = getSprintForProject(projectKey, sprintId);
+
+        if (sprint.getState() == SprintState.CLOSED) {
+            throw new IllegalStateException("Cannot add issues to a finished sprint");
+        }
+
+        final Issue issue = issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        if (sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())) {
+            throw new IllegalStateException("Issue is already in this sprint");
+        }
+
+        sprintIssueRepository.deleteAllByIssueId(issue.getId());
+
+        sprintIssueRepository.save(SprintIssue.builder().sprintId(sprint.getId()).issueId(issue.getId()).build());
+    }
+
+    @Transactional
+    public void removeIssueFromSprint(final String projectKey, final String sprintId, final String issueKey) {
+        final Sprint sprint = getSprintForProject(projectKey, sprintId);
+
+        if (sprint.getState() == SprintState.CLOSED) {
+            throw new IllegalStateException("Cannot remove issues from a finished sprint");
+        }
+
+        final Issue issue = issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        if (!sprintIssueRepository.existsBySprintIdAndIssueId(sprint.getId(), issue.getId())) {
+            throw new EntityNotFoundException("Issue is not in this sprint");
+        }
+
+        sprintIssueRepository.deleteBySprintIdAndIssueId(sprint.getId(), issue.getId());
     }
 
     private Sprint getSprintForProject(final String projectKey, final String sprintId) {
