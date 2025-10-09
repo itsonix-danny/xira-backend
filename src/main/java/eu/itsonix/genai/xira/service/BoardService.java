@@ -142,8 +142,15 @@ public class BoardService {
         return new ScrumBoardDetailsResponse().name(board.getName())
                 .type(ScrumBoardDetailsResponse.TypeEnum.SCRUM)
                 .activeSprint(activeSprintResponse)
-                .plannedSprints(plannedSprintsResponse)
+                .plannedSprints(cleanUp(plannedSprintsResponse))
                 .backlog(backlogIssues);
+    }
+
+    private List<SprintWithIssuesResponse> cleanUp(final List<SprintWithIssuesResponse> plannedSprintsResponse) {
+        if (plannedSprintsResponse.isEmpty()) {
+            return SprintMapper.defaultPlannedSprint;
+        }
+        return plannedSprintsResponse;
     }
 
     private KanbanBoardDetailsResponse getKanbanBoardDetails(final Board board) {

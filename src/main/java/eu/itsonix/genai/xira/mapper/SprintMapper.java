@@ -19,6 +19,12 @@ import eu.itsonix.genai.xira.web.model.SprintWithIssuesResponse;
 
 public final class SprintMapper {
 
+    public static List<SprintWithIssuesResponse> defaultPlannedSprint = List
+            .of(new SprintWithIssuesResponse().id(UUID.fromString("00000000-0000-0000-0000-000000000000"))
+                    .name("Default Sprint")
+                    .goal("")
+                    .state(SprintState.PLANNED));
+
     private SprintMapper() {
     }
 
