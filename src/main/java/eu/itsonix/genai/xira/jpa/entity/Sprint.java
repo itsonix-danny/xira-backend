@@ -3,8 +3,6 @@ package eu.itsonix.genai.xira.jpa.entity;
 import jakarta.persistence.*;
 
 import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.hibernate.annotations.UuidGenerator;
 import org.springframework.data.annotation.CreatedDate;
@@ -17,7 +15,6 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = {"sprintIssues"})
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -50,10 +47,6 @@ public class Sprint {
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private SprintState state;
-
-    @OneToMany(mappedBy = "sprint", fetch = FetchType.LAZY)
-    @Builder.Default
-    private Set<SprintIssue> sprintIssues = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false)

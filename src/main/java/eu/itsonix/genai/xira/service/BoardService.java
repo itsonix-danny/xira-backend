@@ -14,10 +14,8 @@ import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
-import eu.itsonix.genai.xira.jpa.entity.SprintState;
 import eu.itsonix.genai.xira.jpa.repository.*;
 import eu.itsonix.genai.xira.mapper.BoardMapper;
-import eu.itsonix.genai.xira.mapper.SprintMapper;
 import eu.itsonix.genai.xira.web.model.*;
 
 @Service
@@ -150,39 +148,6 @@ public class BoardService {
                         (u, _) -> u, LinkedHashMap::new));
 
         return BoardMapper.toKanbanBoardDetailsResponse(board, issuesByColumn);
-    }
-
-    @Transactional(readOnly = true)
-    public ActiveSprintResponse getActiveSprint(final String projectKey, final Integer boardNumber) {
-        final Board board = boardRepository
-                .findByProjectKeyIgnoreCaseAndBoardNumberAndType(projectKey, boardNumber, BoardType.SCRUM)
-                .orElseThrow(() -> new EntityNotFoundException("Board not found or not a SCRUM board"));
-
-        final Sprint activeSprint = sprintRepository.findByProjectIdAndState(board.getProjectId(), SprintState.ACTIVE)
-                .orElse(null);
-
-        if (activeSprint == null) {
-            return null;
-        }
-
-        final Map<String, List<Issue>> issuesByStatusId = activeSprint.getSprintIssues()
-                .stream()
-                .map(SprintIssue::getIssue)
-                .collect(Collectors.groupingBy(Issue::getStatusId));
-
-        final Map<BoardColumn, List<Issue>> issuesByColumn = boardColumnRepository
-                .findByBoardIdOrderByColumnOrder(board.getId())
-                .stream()
-                .collect(Collectors.toMap(Function.identity(),
-                        column -> column.getBoardColumnWorkflowStatuses()
-                                .stream()
-                                .flatMap(boardColumnWorkflowStatus -> issuesByStatusId
-                                        .getOrDefault(boardColumnWorkflowStatus.getWorkflowStatusId(), List.of())
-                                        .stream())
-                                .toList(),
-                        (u, _) -> u, LinkedHashMap::new));
-
-        return SprintMapper.toActiveSprintResponse(activeSprint, issuesByColumn);
     }
 
     @Transactional

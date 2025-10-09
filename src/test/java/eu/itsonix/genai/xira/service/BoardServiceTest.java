@@ -2,11 +2,9 @@ package eu.itsonix.genai.xira.service;
 
 import jakarta.persistence.EntityNotFoundException;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,7 +14,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.repository.*;
-import eu.itsonix.genai.xira.web.model.*;
+import eu.itsonix.genai.xira.web.model.AddBoardRequest;
+import eu.itsonix.genai.xira.web.model.GetBoardDetails200Response;
+import eu.itsonix.genai.xira.web.model.KanbanBoardDetailsResponse;
+import eu.itsonix.genai.xira.web.model.UpdateBoardRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -243,63 +244,11 @@ class BoardServiceTest {
     }
 
     @Test
-    void givenScrumBoardWithActiveSprint_whenGetActiveSprint_thenReturnsSprintWithColumns() {
-        final String activeSprintId = "550e8400-e29b-41d4-a716-446655440003";
-        final Board board = createScrumBoard();
-        final Sprint activeSprint = createSprintWithIssues(activeSprintId,
-                eu.itsonix.genai.xira.jpa.entity.SprintState.ACTIVE, Set.of());
-        final BoardColumn column = createBoardColumn("col-1", "To Do", 1);
-
-        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumberAndType("XIRA", 1, BoardType.SCRUM))
-                .thenReturn(Optional.of(board));
-        when(sprintRepository.findByProjectIdAndState("project-id",
-                eu.itsonix.genai.xira.jpa.entity.SprintState.ACTIVE)).thenReturn(Optional.of(activeSprint));
-        when(boardColumnRepository.findByBoardIdOrderByColumnOrder("board-id")).thenReturn(List.of(column));
-
-        final ActiveSprintResponse response = boardService.getActiveSprint("XIRA", 1);
-
-        assertThat(response).isNotNull();
-        assertThat(response.getColumns()).hasSize(1);
-    }
-
-    @Test
-    void givenScrumBoardWithoutActiveSprint_whenGetActiveSprint_thenReturnsNull() {
-        final Board board = createScrumBoard();
-
-        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumberAndType("XIRA", 1, BoardType.SCRUM))
-                .thenReturn(Optional.of(board));
-        when(sprintRepository.findByProjectIdAndState("project-id",
-                eu.itsonix.genai.xira.jpa.entity.SprintState.ACTIVE)).thenReturn(Optional.empty());
-
-        final ActiveSprintResponse response = boardService.getActiveSprint("XIRA", 1);
-
-        assertThat(response).isNull();
-    }
-
-    @Test
-    void givenKanbanBoard_whenGetActiveSprint_thenThrowsEntityNotFound() {
-        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumberAndType("XIRA", 1, BoardType.SCRUM))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> boardService.getActiveSprint("XIRA", 1)).isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Board not found or not a SCRUM board");
-    }
-
-    @Test
     void givenNonExistentBoard_whenGetBoardDetails_thenThrowsEntityNotFound() {
         when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumber("XIRA", 99)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> boardService.getBoardDetails("XIRA", 99)).isInstanceOf(EntityNotFoundException.class)
                 .hasMessage("Board not found");
-    }
-
-    @Test
-    void givenNonExistentBoard_whenGetActiveSprint_thenThrowsEntityNotFound() {
-        when(boardRepository.findByProjectKeyIgnoreCaseAndBoardNumberAndType("XIRA", 99, BoardType.SCRUM))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> boardService.getActiveSprint("XIRA", 99)).isInstanceOf(EntityNotFoundException.class)
-                .hasMessage("Board not found or not a SCRUM board");
     }
 
     @Test
@@ -323,16 +272,6 @@ class BoardServiceTest {
         verify(boardRepository, never()).delete(any(Board.class));
     }
 
-    private Board createScrumBoard() {
-        return Board.builder()
-                .id("board-id")
-                .name("Scrum Board")
-                .boardNumber(1)
-                .type(BoardType.SCRUM)
-                .projectId("project-id")
-                .build();
-    }
-
     private Board createKanbanBoard() {
         return Board.builder()
                 .id("board-id")
@@ -340,18 +279,6 @@ class BoardServiceTest {
                 .boardNumber(1)
                 .type(BoardType.KANBAN)
                 .projectId("project-id")
-                .build();
-    }
-
-    private Sprint createSprintWithIssues(final String id, final eu.itsonix.genai.xira.jpa.entity.SprintState state,
-            final Set<SprintIssue> sprintIssues) {
-        return Sprint.builder()
-                .id(id)
-                .name("Sprint 1")
-                .goal("Sprint goal")
-                .state(state)
-                .sprintIssues(sprintIssues)
-                .createdAt(Instant.now())
                 .build();
     }
 

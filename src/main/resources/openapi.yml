@@ -658,47 +658,6 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
-  /projects/{key}/boards/{boardNumber}/active-sprint:
-    get:
-      tags: [ Boards ]
-      operationId: getActiveSprint
-      summary: Get active sprint view for a SCRUM board
-      description: 'Returns the active sprint with board columns and issues. Only works for SCRUM boards. Returns 204 if no active sprint exists.'
-      security:
-        - BearerAuth: [ ]
-      parameters:
-        - name: key
-          in: path
-          required: true
-          description: Project key
-          schema:
-            type: string
-        - name: boardNumber
-          in: path
-          required: true
-          description: Board number
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Active sprint retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActiveSprintResponse'
-        '204':
-          description: No active sprint exists
-        '400':
-          $ref: '#/components/responses/Problem'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-        '500':
-          $ref: '#/components/responses/Problem'
-
   /projects/{key}/members:
     get:
       tags: [ Projects ]
@@ -1456,43 +1415,6 @@ components:
         columns:
           type: array
           description: Board columns ordered by column order
-          items:
-            $ref: '#/components/schemas/BoardColumnResponse'
-
-    ActiveSprintResponse:
-      type: object
-      additionalProperties: false
-      required: [ id, name, goal, state, createdAt, columns ]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Sprint identifier
-        name:
-          type: string
-          description: Sprint name
-        goal:
-          type: string
-          description: Sprint goal
-        state:
-          $ref: '#/components/schemas/SprintState'
-        createdAt:
-          type: string
-          format: date-time
-          description: Timestamp when the sprint was created
-        startedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the sprint was started
-        finishedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp when the sprint was finished
-        columns:
-          type: array
-          description: Board columns with issues from active sprint
           items:
             $ref: '#/components/schemas/BoardColumnResponse'
 
