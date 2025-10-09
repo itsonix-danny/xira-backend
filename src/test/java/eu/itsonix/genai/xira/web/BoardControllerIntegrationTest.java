@@ -1,6 +1,5 @@
 package eu.itsonix.genai.xira.web;
 
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -383,30 +382,6 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void givenScrumBoardWithData_whenGetBoardDetails_thenReturns200WithCorrectStructure() {
-        registerUser(EMAIL, PASSWORD, "Owner", "Example");
-        final String token = login(EMAIL, PASSWORD);
-        createProject(token);
-
-        given().contentType(ContentType.JSON)
-                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .body(new AddBoardRequest().name("Scrum Board").type(AddBoardRequest.TypeEnum.SCRUM))
-                .when()
-                .post("/projects/XIRA/boards")
-                .then()
-                .statusCode(201);
-
-        given().header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
-                .when()
-                .get("/projects/XIRA/boards/1")
-                .then()
-                .statusCode(200)
-                .body("name", equalTo("Scrum Board"))
-                .body("type", equalTo("SCRUM"))
-                .body("backlog", equalTo(List.of()));
-    }
-
-    @Test
     void givenKanbanBoardWithIssues_whenGetBoardDetails_thenReturns200WithColumns() {
         registerUser(EMAIL, PASSWORD, "Owner", "Example");
         final String token = login(EMAIL, PASSWORD);
@@ -496,10 +471,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .get("/projects/XIRA/boards/1")
-                .then()
-                .statusCode(401);
+        given().when().get("/projects/XIRA/boards/1").then().statusCode(401);
     }
 
     @Test
@@ -572,10 +544,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .get("/projects/XIRA/boards/1/active-sprint")
-                .then()
-                .statusCode(401);
+        given().when().get("/projects/XIRA/boards/1/active-sprint").then().statusCode(401);
     }
 
     @Test
@@ -728,10 +697,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .delete("/projects/XIRA/boards/1")
-                .then()
-                .statusCode(401);
+        given().when().delete("/projects/XIRA/boards/1").then().statusCode(401);
     }
 
     @Test

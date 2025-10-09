@@ -17,7 +17,6 @@ import eu.itsonix.genai.xira.jpa.entity.*;
 import eu.itsonix.genai.xira.jpa.entity.SprintState;
 import eu.itsonix.genai.xira.jpa.repository.*;
 import eu.itsonix.genai.xira.mapper.BoardMapper;
-import eu.itsonix.genai.xira.mapper.IssueMapper;
 import eu.itsonix.genai.xira.mapper.SprintMapper;
 import eu.itsonix.genai.xira.web.model.*;
 
@@ -121,29 +120,9 @@ public class BoardService {
     }
 
     private ScrumBoardDetailsResponse getScrumBoardDetails(final Board board) {
-        final SprintWithIssuesResponse activeSprintResponse = sprintRepository
-                .findByProjectIdAndState(board.getProjectId(), SprintState.ACTIVE)
-                .map(SprintMapper::toSprintWithIssuesResponse)
-                .orElse(null);
+        // ToDo implement ScrumBoardDetailsResponse here
 
-        final List<SprintWithIssuesResponse> plannedSprintsResponse = sprintRepository
-                .findByProjectIdAndStateOrderByCreatedAt(board.getProjectId(), SprintState.PLANNED)
-                .stream()
-                .map(SprintMapper::toSprintWithIssuesResponse)
-                .toList();
-
-        final List<IssueSummaryResponse> backlogIssues = issueRepository
-                .findByProjectIdAndStatusCategoryNotAndSprintIssuesEmptyOrderBySeqNoAsc(board.getProjectId(),
-                        WorkflowStatusCategory.DONE)
-                .stream()
-                .map(IssueMapper::toIssueSummaryResponse)
-                .toList();
-
-        return new ScrumBoardDetailsResponse().name(board.getName())
-                .type(ScrumBoardDetailsResponse.TypeEnum.SCRUM)
-                .activeSprint(activeSprintResponse)
-                .plannedSprints(plannedSprintsResponse)
-                .backlog(backlogIssues);
+        return new ScrumBoardDetailsResponse();
     }
 
     private KanbanBoardDetailsResponse getKanbanBoardDetails(final Board board) {
