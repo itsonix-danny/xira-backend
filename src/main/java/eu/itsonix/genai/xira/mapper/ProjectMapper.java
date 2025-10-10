@@ -11,6 +11,7 @@ import eu.itsonix.genai.xira.web.model.ProjectBoardResponse;
 import eu.itsonix.genai.xira.web.model.ProjectDetailsResponse;
 import eu.itsonix.genai.xira.web.model.ProjectMemberResponse;
 import eu.itsonix.genai.xira.web.model.ProjectMemberRole;
+import eu.itsonix.genai.xira.web.model.ProjectMembershipResponse;
 
 public final class ProjectMapper {
 
@@ -53,6 +54,13 @@ public final class ProjectMapper {
                 .lastName(user.getLastName())
                 .role(toProjectMemberRole(projectMember.getRole()))
                 .isOwner(isOwner(projectMember));
+    }
+
+    public static ProjectMembershipResponse toProjectMembershipResponse(final ProjectMember projectMember) {
+        final Project project = projectMember.getProject();
+        return new ProjectMembershipResponse().projectKey(project.getKey())
+                .isOwner(isOwner(projectMember))
+                .isAdmin(isAdmin(projectMember));
     }
 
     private static ProjectMemberRole toProjectMemberRole(final ProjectRole role) {

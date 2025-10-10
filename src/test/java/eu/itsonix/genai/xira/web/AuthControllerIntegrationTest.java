@@ -52,6 +52,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
 
         assertThat(tokenResponse.getAccessToken()).isNotNull();
         assertThat(tokenResponse.getAccessToken()).isNotEmpty();
+        assertThat(tokenResponse.getUser()).isNotNull();
+        assertThat(tokenResponse.getUser().getEmail()).isEqualTo(registerRequest.getEmail());
+        assertThat(tokenResponse.getUser().getFirstName()).isEqualTo(registerRequest.getFirstName());
+        assertThat(tokenResponse.getUser().getLastName()).isEqualTo(registerRequest.getLastName());
+        assertThat(tokenResponse.getProjectMemberships()).isNotNull();
+        assertThat(tokenResponse.getProjectMemberships()).isEmpty();
     }
 
     @Test

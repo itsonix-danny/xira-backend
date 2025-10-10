@@ -1578,11 +1578,18 @@ components:
     TokenResponse:
       type: object
       additionalProperties: false
-      required: [ access_token ]
+      required: [ access_token, user, projectMemberships ]
       properties:
         access_token:
           type: string
           description: 'Signed JWT to send as `Authorization: Bearer <token>`'
+        user:
+          $ref: '#/components/schemas/UserResponse'
+        projectMemberships:
+          type: array
+          description: List of project memberships of the authenticated user
+          items:
+            $ref: '#/components/schemas/ProjectMembershipResponse'
 
     AddProjectMemberRequest:
       type: object
@@ -1766,6 +1773,21 @@ components:
         isOwner:
           type: boolean
           description: Whether the user is the owner of the project
+
+    ProjectMembershipResponse:
+      type: object
+      additionalProperties: false
+      required: [ projectKey, isAdmin, isOwner ]
+      properties:
+        projectKey:
+          type: string
+          description: Unique key of the project
+        isAdmin:
+          type: boolean
+          description: Whether the authenticated user is an admin in the project
+        isOwner:
+          type: boolean
+          description: Whether the authenticated user is the owner of the project
 
     WorkflowStatusResponse:
       type: object

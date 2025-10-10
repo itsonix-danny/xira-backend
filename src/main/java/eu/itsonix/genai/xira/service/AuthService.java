@@ -1,6 +1,7 @@
 package eu.itsonix.genai.xira.service;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,10 +21,13 @@ import lombok.RequiredArgsConstructor;
 import eu.itsonix.genai.xira.jpa.entity.IssueComment;
 import eu.itsonix.genai.xira.jpa.entity.ProjectRole;
 import eu.itsonix.genai.xira.jpa.entity.XiraUser;
+import eu.itsonix.genai.xira.mapper.ProjectMapper;
+import eu.itsonix.genai.xira.mapper.UserMapper;
 import eu.itsonix.genai.xira.jpa.repository.IssueCommentRepository;
 import eu.itsonix.genai.xira.jpa.repository.ProjectMemberRepository;
 import eu.itsonix.genai.xira.jpa.repository.XiraUserRepository;
 import eu.itsonix.genai.xira.web.model.LoginRequest;
+import eu.itsonix.genai.xira.web.model.ProjectMembershipResponse;
 import eu.itsonix.genai.xira.web.model.RegisterRequest;
 import eu.itsonix.genai.xira.web.model.TokenResponse;
 
@@ -57,7 +61,17 @@ public class AuthService {
         final JwsHeader jwsHeader = JwsHeader.with(SignatureAlgorithm.RS256).build();
         final String token = jwtEncoder.encode(JwtEncoderParameters.from(jwsHeader, claims)).getTokenValue();
 
-        return new TokenResponse(token);
+        final XiraUser user = xiraUserRepository.findByEmailIgnoreCase(auth.getName())
+                .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
+
+        final List<ProjectMembershipResponse> projectMemberships = projectMemberRepository.findAllByUserId(user.getId())
+                .stream()
+                .map(ProjectMapper::toProjectMembershipResponse)
+                .toList();
+
+        return new TokenResponse().accessToken(token)
+                .user(UserMapper.toUserResponse(user))
+                .projectMemberships(projectMemberships);
     }
 
     public void register(final RegisterRequest registerRequest) {
