@@ -1057,6 +1057,88 @@ paths:
         '500':
           $ref: '#/components/responses/Problem'
 
+  /projects/{key}/issues/{issueKey}/relations:
+    post:
+      tags: [ Issues ]
+      operationId: addIssueRelation
+      summary: Add a relation between issues
+      description: 'Creates a relation between the specified issue and another issue. Only accessible by project members.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddIssueRelationRequest'
+      responses:
+        '201':
+          description: Issue relation added successfully
+        '400':
+          $ref: '#/components/responses/Problem'
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '409':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /projects/{key}/issues/{issueKey}/relations/{relatedIssueKey}:
+    delete:
+      tags: [ Issues ]
+      operationId: removeIssueRelation
+      summary: Remove a relation between issues
+      description: 'Removes a relation between the specified issue and another issue. Only accessible by project members.'
+      security:
+        - BearerAuth: [ ]
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Project key
+          schema:
+            type: string
+        - name: issueKey
+          in: path
+          required: true
+          description: Issue key
+          schema:
+            type: string
+        - name: relatedIssueKey
+          in: path
+          required: true
+          description: Related issue key
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Issue relation removed successfully
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '404':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
   /projects/{key}/issues/{issueKey}/comments:
     post:
       tags: [ Issues ]
@@ -1742,6 +1824,19 @@ components:
           type: string
           description: User last name
 
+    IssueRelationResponse:
+      type: object
+      additionalProperties: false
+      required: [ relatedIssueKey, relationType ]
+      properties:
+        relatedIssueKey:
+          type: string
+          description: Key of the related issue (e.g., XIRA-2)
+        relationType:
+          type: string
+          description: Type of relation
+          enum: [ BLOCKS, BLOCKED_BY, RELATES_TO ]
+
     ProjectMemberResponse:
       type: object
       additionalProperties: false
@@ -1849,6 +1944,19 @@ components:
           format: uuid
           description: Workflow status ID
 
+    AddIssueRelationRequest:
+      type: object
+      additionalProperties: false
+      required: [ relatedIssueKey, relationType ]
+      properties:
+        relatedIssueKey:
+          type: string
+          description: Key of the issue to relate to (e.g., XIRA-2)
+        relationType:
+          type: string
+          description: Type of relation
+          enum: [ BLOCKS, BLOCKED_BY, RELATES_TO ]
+
     AddCommentRequest:
       type: object
       additionalProperties: false
@@ -1916,6 +2024,11 @@ components:
           format: date-time
           nullable: true
           description: Timestamp when the issue was closed
+        relations:
+          type: array
+          description: List of issue relations
+          items:
+            $ref: '#/components/schemas/IssueRelationResponse'
         comments:
           type: array
           description: List of comments on this issue

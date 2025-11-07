@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import eu.itsonix.genai.xira.service.IssueService;
 import eu.itsonix.genai.xira.web.api.IssuesApi;
 import eu.itsonix.genai.xira.web.model.*;
+import jakarta.validation.Valid;
 
 @RestController
 @RequiredArgsConstructor
@@ -94,5 +95,18 @@ public class IssueController implements IssuesApi {
     public ResponseEntity<Void> deleteComment(final String key, final String issueKey, final UUID commentId) {
         issueService.deleteComment(key, issueKey, commentId.toString());
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<Void> addIssueRelation(String key, String issueKey,
+            @Valid AddIssueRelationRequest addIssueRelationRequest) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'addIssueRelation'");
+    }
+
+    @Override
+    public ResponseEntity<Void> removeIssueRelation(String key, String issueKey, String relatedIssueKey) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'removeIssueRelation'");
     }
 }
