@@ -98,15 +98,18 @@ public class IssueController implements IssuesApi {
     }
 
     @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
     public ResponseEntity<Void> addIssueRelation(String key, String issueKey,
             @Valid AddIssueRelationRequest addIssueRelationRequest) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'addIssueRelation'");
+        issueService.addIssueRelation(key, issueKey, addIssueRelationRequest);
+        return ResponseEntity.created(URI.create(String.format("/projects/%s/issues/%s/relations/%s", key, issueKey,
+                addIssueRelationRequest.getRelatedIssueKey()))).build();
     }
 
     @Override
+    @PreAuthorize("@authService.isProjectMember(#key)")
     public ResponseEntity<Void> removeIssueRelation(String key, String issueKey, String relatedIssueKey) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'removeIssueRelation'");
+        issueService.removeIssueRelation(key, issueKey, relatedIssueKey);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -1157,4 +1157,289 @@ class IssueControllerIntegrationTest extends BaseIntegrationTest {
                 .body("comments[1].content", org.hamcrest.Matchers.notNullValue())
                 .body("comments[1].author.email", org.hamcrest.Matchers.equalTo("user@example.com"));
     }
+
+    @Test
+    void givenValidRequest_whenAddIssueRelation_thenReturns201() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .when()
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1)
+                .then()
+                .statusCode(201)
+                .header(HttpHeaders.LOCATION, matchesPattern(".*/projects/XIRA/issues/" + issueKey1 + "/relations/" + issueKey2));
+    }
+
+    @Test
+    void givenBlocksRelation_whenAddIssueRelation_thenCreatesInverseRelation() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey1)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(1))
+                .body("relations[0].relatedIssueKey", org.hamcrest.Matchers.equalTo(issueKey2))
+                .body("relations[0].relationType", org.hamcrest.Matchers.equalTo("BLOCKS"));
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey2)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(1))
+                .body("relations[0].relatedIssueKey", org.hamcrest.Matchers.equalTo(issueKey1))
+                .body("relations[0].relationType", org.hamcrest.Matchers.equalTo("BLOCKED_BY"));
+    }
+
+    @Test
+    void givenRelatesToRelation_whenAddIssueRelation_thenCreatesBidirectionalRelation() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.RELATES_TO);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey1)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(1))
+                .body("relations[0].relatedIssueKey", org.hamcrest.Matchers.equalTo(issueKey2))
+                .body("relations[0].relationType", org.hamcrest.Matchers.equalTo("RELATES_TO"));
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey2)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(1))
+                .body("relations[0].relatedIssueKey", org.hamcrest.Matchers.equalTo(issueKey1))
+                .body("relations[0].relationType", org.hamcrest.Matchers.equalTo("RELATES_TO"));
+    }
+
+    @Test
+    void givenNonMember_whenAddIssueRelation_thenReturns403() {
+        registerUser("owner@example.com", "password", "Owner", "User");
+        final String ownerToken = login("owner@example.com", "password");
+        createProject(ownerToken);
+
+        final String issueKey1 = createIssue(ownerToken, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(ownerToken, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        registerUser("nonmember@example.com", "password", "Non", "Member");
+        final String nonMemberToken = login("nonmember@example.com", "password");
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", nonMemberToken))
+                .body(request)
+                .when()
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenInvalidRelatedIssue_whenAddIssueRelation_thenReturns404() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey("XIRA-999")
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .when()
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey)
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void givenExistingRelation_whenAddIssueRelation_thenReturns409() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .when()
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1)
+                .then()
+                .statusCode(409);
+    }
+
+    @Test
+    void givenValidRelation_whenRemoveIssueRelation_thenReturns204() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .delete("/projects/{key}/issues/{issueKey}/relations/{relatedIssueKey}", "XIRA", issueKey1, issueKey2)
+                .then()
+                .statusCode(204);
+    }
+
+    @Test
+    void givenValidRelation_whenRemoveIssueRelation_thenRemovesInverseRelation() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .delete("/projects/{key}/issues/{issueKey}/relations/{relatedIssueKey}", "XIRA", issueKey1, issueKey2);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey1)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(0));
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .get("/projects/{key}/issues/{issueKey}", "XIRA", issueKey2)
+                .then()
+                .statusCode(200)
+                .body("relations", org.hamcrest.Matchers.hasSize(0));
+    }
+
+    @Test
+    void givenNonMember_whenRemoveIssueRelation_thenReturns403() {
+        registerUser("owner@example.com", "password", "Owner", "User");
+        final String ownerToken = login("owner@example.com", "password");
+        createProject(ownerToken);
+
+        final String issueKey1 = createIssue(ownerToken, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(ownerToken, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey2)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", ownerToken))
+                .body(request)
+                .post("/projects/{key}/issues/{issueKey}/relations", "XIRA", issueKey1);
+
+        registerUser("nonmember@example.com", "password", "Non", "Member");
+        final String nonMemberToken = login("nonmember@example.com", "password");
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", nonMemberToken))
+                .when()
+                .delete("/projects/{key}/issues/{issueKey}/relations/{relatedIssueKey}", "XIRA", issueKey1, issueKey2)
+                .then()
+                .statusCode(403);
+    }
+
+    @Test
+    void givenNonExistingRelation_whenRemoveIssueRelation_thenReturns404() {
+        registerUser("user@example.com", "password", "John", "Doe");
+        final String token = login("user@example.com", "password");
+        createProject(token);
+
+        final String issueKey1 = createIssue(token, "XIRA", "Issue 1", CreateIssueRequest.IssueTypeEnum.BUG);
+        final String issueKey2 = createIssue(token, "XIRA", "Issue 2", CreateIssueRequest.IssueTypeEnum.TASK);
+
+        given().contentType(ContentType.JSON)
+                .header(HttpHeaders.AUTHORIZATION, String.format("Bearer %s", token))
+                .when()
+                .delete("/projects/{key}/issues/{issueKey}/relations/{relatedIssueKey}", "XIRA", issueKey1, issueKey2)
+                .then()
+                .statusCode(404);
+    }
 }

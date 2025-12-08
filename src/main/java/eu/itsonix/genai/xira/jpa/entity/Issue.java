@@ -17,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = { "issueAssignees", "sprintIssues", "comments" })
+@ToString(exclude = { "issueAssignees", "sprintIssues", "comments", "issueRelations", "relatedIssueRelations" })
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)
@@ -83,8 +83,16 @@ public class Issue {
     @Builder.Default
     private Set<IssueComment> comments = new HashSet<>();
 
+    @OneToMany(mappedBy = "issue", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<IssueRelation> issueRelations = new HashSet<>();
+
+    @OneToMany(mappedBy = "relatedIssue", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<IssueRelation> relatedIssueRelations = new HashSet<>();
+
     @CreatedDate
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
     @LastModifiedDate

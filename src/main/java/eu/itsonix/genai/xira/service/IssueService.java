@@ -27,8 +27,9 @@ public class IssueService {
     private final WorkflowStatusRepository workflowStatusRepository;
     private final IssueAssigneeRepository issueAssigneeRepository;
     private final IssueCommentRepository issueCommentRepository;
-    private final XiraUserRepository xiraUserRepository;
+    private final IssueRelationRepository issueRelationRepository;
     private final ProjectMemberRepository projectMemberRepository;
+    private final XiraUserRepository xiraUserRepository;
     private final AuthService authService;
 
     @Transactional
@@ -190,5 +191,97 @@ public class IssueService {
                 .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
 
         return IssueMapper.toIssueDetailsResponse(issue);
+    }
+
+    @Transactional
+    public void addIssueRelation(final String projectKey, final String issueKey,
+            final AddIssueRelationRequest addIssueRelationRequest) {
+        final Issue issue = issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        final String relatedIssueKey = addIssueRelationRequest.getRelatedIssueKey();
+        final Issue relatedIssue = issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Related issue not found"));
+
+        if (issue.getId().equals(relatedIssue.getId())) {
+            throw new IllegalStateException("Cannot relate an issue to itself");
+        }
+
+        final IssueRelationType relationType = IssueRelationType
+                .valueOf(addIssueRelationRequest.getRelationType().name());
+
+        // Check if relation already exists
+        if (issueRelationRepository.existsByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId())) {
+            throw new IllegalStateException("Relation already exists");
+        }
+
+        // Create the primary relation
+        final IssueRelation relation = IssueRelation.builder()
+                .issueId(issue.getId())
+                .relatedIssueId(relatedIssue.getId())
+                .issue(issue)
+                .relatedIssue(relatedIssue)
+                .relationType(relationType)
+                .build();
+
+        issueRelationRepository.save(relation);
+
+        // Handle bidirectional relations
+        if (relationType == IssueRelationType.BLOCKS) {
+            // If A blocks B, then B is blocked by A
+            final IssueRelation inverseRelation = IssueRelation.builder()
+                    .issueId(relatedIssue.getId())
+                    .relatedIssueId(issue.getId())
+                    .issue(relatedIssue)
+                    .relatedIssue(issue)
+                    .relationType(IssueRelationType.BLOCKED_BY)
+                    .build();
+            issueRelationRepository.save(inverseRelation);
+        } else if (relationType == IssueRelationType.BLOCKED_BY) {
+            // If A is blocked by B, then B blocks A
+            final IssueRelation inverseRelation = IssueRelation.builder()
+                    .issueId(relatedIssue.getId())
+                    .relatedIssueId(issue.getId())
+                    .issue(relatedIssue)
+                    .relatedIssue(issue)
+                    .relationType(IssueRelationType.BLOCKS)
+                    .build();
+            issueRelationRepository.save(inverseRelation);
+        } else if (relationType == IssueRelationType.RELATES_TO) {
+            // If A relates to B, then B relates to A
+            if (!issueRelationRepository.existsByIssueIdAndRelatedIssueId(relatedIssue.getId(), issue.getId())) {
+                final IssueRelation inverseRelation = IssueRelation.builder()
+                        .issueId(relatedIssue.getId())
+                        .relatedIssueId(issue.getId())
+                        .issue(relatedIssue)
+                        .relatedIssue(issue)
+                        .relationType(IssueRelationType.RELATES_TO)
+                        .build();
+                issueRelationRepository.save(inverseRelation);
+            }
+        }
+    }
+
+    @Transactional
+    public void removeIssueRelation(final String projectKey, final String issueKey, final String relatedIssueKey) {
+        final Issue issue = issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Issue not found"));
+
+        final Issue relatedIssue = issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey)
+                .orElseThrow(() -> new EntityNotFoundException("Related issue not found"));
+
+        final IssueRelation relation = issueRelationRepository
+                .findByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Relation not found"));
+
+        // Delete the primary relation
+        issueRelationRepository.deleteByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId());
+
+        // Delete the inverse relation
+        if (relation.getRelationType() == IssueRelationType.BLOCKS
+                || relation.getRelationType() == IssueRelationType.BLOCKED_BY
+                || relation.getRelationType() == IssueRelationType.RELATES_TO) {
+            issueRelationRepository.deleteByIssueIdAndRelatedIssueId(relatedIssue.getId(), issue.getId());
+        }
     }
 }

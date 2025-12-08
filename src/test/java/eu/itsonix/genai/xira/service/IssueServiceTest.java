@@ -45,6 +45,9 @@ class IssueServiceTest {
     private IssueCommentRepository issueCommentRepository;
 
     @Mock
+    private IssueRelationRepository issueRelationRepository;
+
+    @Mock
     private XiraUserRepository xiraUserRepository;
 
     @Mock
@@ -1174,5 +1177,315 @@ class IssueServiceTest {
         assertThat(result.getComments().getFirst().getAuthor().getFirstName()).isEqualTo("Commenter");
         assertThat(result.getComments().get(1).getContent()).isEqualTo("Second comment");
         assertThat(result.getComments().get(1).getAuthor().getFirstName()).isEqualTo("Commenter");
+    }
+
+    @Test
+    void addIssueRelation_Creates_Blocks_Relation_When_Valid_Request() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.existsByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(false);
+
+        issueService.addIssueRelation(projectKey, issueKey, request);
+
+        verify(issueRelationRepository, times(2)).save(any(IssueRelation.class));
+    }
+
+    @Test
+    void addIssueRelation_Creates_Blocked_By_Relation_When_Valid_Request() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKED_BY);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.existsByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(false);
+
+        issueService.addIssueRelation(projectKey, issueKey, request);
+
+        verify(issueRelationRepository, times(2)).save(any(IssueRelation.class));
+    }
+
+    @Test
+    void addIssueRelation_Creates_Relates_To_Relation_When_Valid_Request() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.RELATES_TO);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.existsByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(false);
+        when(issueRelationRepository.existsByIssueIdAndRelatedIssueId(relatedIssue.getId(), issue.getId()))
+                .thenReturn(false);
+
+        issueService.addIssueRelation(projectKey, issueKey, request);
+
+        verify(issueRelationRepository, times(2)).save(any(IssueRelation.class));
+    }
+
+    @Test
+    void addIssueRelation_Throws_Exception_When_Issue_Not_Found() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.addIssueRelation(projectKey, issueKey, request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Issue not found");
+    }
+
+    @Test
+    void addIssueRelation_Throws_Exception_When_Related_Issue_Not_Found() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.addIssueRelation(projectKey, issueKey, request))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Related issue not found");
+    }
+
+    @Test
+    void addIssueRelation_Throws_Exception_When_Issue_Relates_To_Itself() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(issueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+
+        assertThatThrownBy(() -> issueService.addIssueRelation(projectKey, issueKey, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot relate an issue to itself");
+    }
+
+    @Test
+    void addIssueRelation_Throws_Exception_When_Relation_Already_Exists() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        final AddIssueRelationRequest request = new AddIssueRelationRequest()
+                .relatedIssueKey(relatedIssueKey)
+                .relationType(AddIssueRelationRequest.RelationTypeEnum.BLOCKS);
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.existsByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> issueService.addIssueRelation(projectKey, issueKey, request))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Relation already exists");
+    }
+
+    @Test
+    void removeIssueRelation_Deletes_Relation_When_Valid_Request() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        final IssueRelation relation = IssueRelation.builder()
+                .issueId(issue.getId())
+                .relatedIssueId(relatedIssue.getId())
+                .issue(issue)
+                .relatedIssue(relatedIssue)
+                .relationType(IssueRelationType.BLOCKS)
+                .build();
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.findByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(Optional.of(relation));
+
+        issueService.removeIssueRelation(projectKey, issueKey, relatedIssueKey);
+
+        verify(issueRelationRepository).deleteByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId());
+        verify(issueRelationRepository).deleteByIssueIdAndRelatedIssueId(relatedIssue.getId(), issue.getId());
+    }
+
+    @Test
+    void removeIssueRelation_Throws_Exception_When_Issue_Not_Found() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.removeIssueRelation(projectKey, issueKey, relatedIssueKey))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Issue not found");
+    }
+
+    @Test
+    void removeIssueRelation_Throws_Exception_When_Related_Issue_Not_Found() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.removeIssueRelation(projectKey, issueKey, relatedIssueKey))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Related issue not found");
+    }
+
+    @Test
+    void removeIssueRelation_Throws_Exception_When_Relation_Not_Found() {
+        final String projectKey = "XIRA";
+        final String issueKey = "XIRA-1";
+        final String relatedIssueKey = "XIRA-2";
+
+        final Issue issue = Issue.builder()
+                .id("issue-1-id")
+                .key(issueKey)
+                .title("Issue 1")
+                .build();
+
+        final Issue relatedIssue = Issue.builder()
+                .id("issue-2-id")
+                .key(relatedIssueKey)
+                .title("Issue 2")
+                .build();
+
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
+                .thenReturn(Optional.of(issue));
+        when(issueRepository.findByKeyAndProjectKeyIgnoreCase(relatedIssueKey, projectKey))
+                .thenReturn(Optional.of(relatedIssue));
+        when(issueRelationRepository.findByIssueIdAndRelatedIssueId(issue.getId(), relatedIssue.getId()))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> issueService.removeIssueRelation(projectKey, issueKey, relatedIssueKey))
+                .isInstanceOf(EntityNotFoundException.class)
+                .hasMessage("Relation not found");
     }
 }
