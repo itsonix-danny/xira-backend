@@ -11,8 +11,8 @@ A Jira-like issue tracker and project management system built with Spring Boot 3
 ## First Time Setup
 
 ```bash
-# 1. Copy `.env-example` to `.env` and adjust the values if needed:
-cp .env-example .env
+# 1. Copy `.env.example` to `.env` and adjust the values if needed:
+cp .env.example .env
   
 # 2. Start the PostgreSQL database:
 docker compose up -d
@@ -24,6 +24,7 @@ mvn clean install
 ## Running the Application
 
 ```bash
+docker compose up -d
 mvn spring-boot:run
 ```
 
