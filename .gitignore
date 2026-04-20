@@ -18,6 +18,7 @@ target/
 .idea
 .junie
 .github
+.claude
 *.iws
 *.iml
 *.ipr
