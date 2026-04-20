@@ -17,6 +17,12 @@ mvn verify                     # Run all tests including integration
 mvn test -Dtest=TestClassName  # Run specific test
 ```
 
+## IMPORTANT RULES
+
+- Always test and verify your changes before finishing a task
+- Use unit tests, integration tests, and manual testing via curl against the locally-running backend
+- A task is NOT COMPLETE until it is both successfully tested and verified
+
 ## Architecture
 
 Spring Boot 3.5.5 (Java 25) with layered architecture:
