@@ -15,6 +15,8 @@
 
     <properties>
         <java.version>25</java.version>
+        <net.revelc.code.formatter.formatter-maven-plugin.version>2.29.0</net.revelc.code.formatter.formatter-maven-plugin.version>
+        <net.revelc.code.impsort-maven-plugin.version>1.13.0</net.revelc.code.impsort-maven-plugin.version>
     </properties>
     <dependencies>
         <dependency>
@@ -192,6 +194,52 @@
                                 <useTags>true</useTags>
                             </configOptions>
                         </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.revelc.code</groupId>
+                <artifactId>impsort-maven-plugin</artifactId>
+                <version>${net.revelc.code.impsort-maven-plugin.version}</version>
+                <configuration>
+                    <removeUnused>true</removeUnused>
+                    <staticGroups>*</staticGroups>
+                    <staticAfter>true</staticAfter>
+                    <groups>jakarta.,javax.,java.,org.,com.,lombok.</groups>
+                    <compliance>25</compliance>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>maven-import-check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.revelc.code.formatter</groupId>
+                <artifactId>formatter-maven-plugin</artifactId>
+                <version>${net.revelc.code.formatter.formatter-maven-plugin.version}</version>
+                <configuration>
+                    <configFile>${project.basedir}/project_code_format_convention.xml</configFile>
+                    <encoding>UTF-8</encoding>
+                    <lineEnding>LF</lineEnding>
+                    <compilerSource>25</compilerSource>
+                    <compilerCompliance>25</compilerCompliance>
+                    <compilerTargetPlatform>25</compilerTargetPlatform>
+                    <skipJsFormatting>true</skipJsFormatting>
+                    <skipHtmlFormatting>true</skipHtmlFormatting>
+                    <skipXmlFormatting>true</skipXmlFormatting>
+                    <skipCssFormatting>true</skipCssFormatting>
+                    <skipJsonFormatting>true</skipJsonFormatting>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>maven-format-check</id>
+                        <goals>
+                            <goal>validate</goal>
+                        </goals>
                     </execution>
                 </executions>
             </plugin>

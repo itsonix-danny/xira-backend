@@ -22,6 +22,7 @@ mvn test -Dtest=TestClassName  # Run specific test
 - Always test and verify your changes before finishing a task
 - Use unit tests, integration tests, and manual testing via curl against the locally-running backend
 - A task is NOT COMPLETE until it is both successfully tested and verified
+- Use the spring-tech-research-analyst subagent for technical research (e.g., dependency updates or framework research)
 
 ## Architecture
 
@@ -129,35 +130,8 @@ Spring Boot 3.5.5 (Java 25) with layered architecture:
 - **Economical use of variables**: Avoid introducing variables that are only used once. Avoid creating multiple
   instances of the same entity when saving (e.g., `final Sprint savedSprint = sprintRepository.save(sprint);`)
 
-## Testing Approach
+## Testing
 
-- **Unit tests**: Write unit tests for all public service methods that is not trivial (e.g., a single repository call)
-- **Integration tests**: Write integration tests for all API endpoints.
-- **Edge Cases**: Do not only test happy paths, but also edge cases (e.g., invalid credentials, missing fields, etc.)
-- **Always run tests after writing them**: When creating new test methods, immediately run them to ensure they pass
-  before moving on
-- **Test naming**: Use `given[Condition]_then[Outcome]` format (e.g., `givenValidCredentials_thenReturns200WithToken`)
-- **Avoid redundancy**: Question similar tests - if two tests cover the same behavior, keep the most comprehensive one
-- **Focus on behavior**: Test observable outcomes, not implementation details (avoid testing method delegation or
-  internal calls)
-- **Consistency**: Whenever possible, check similar tests in the project and follow the same structure and patterns
-
-**Unit Tests** use Mockito with a consistent structure:
-
-- `@ExtendWith(MockitoExtension.class)` for Mockito support
-- `@Mock` and `@InjectMocks` for dependency injection
-- Given/When/Then pattern for test organization
-- Builders for test data creation of entities
-- For auto-generated DTOs use the integrated builder instead of setters,
-  e.g. `new LoginRequest().email("email").password("password")`
-
-**Integration Tests** with TestContainers and REST Assured:
-
-- **TestContainers**: PostgreSQL instance
-- **REST Assured**: API endpoint testing with `ContentType.JSON` (not string literals)
-- **Common base for integration tests**: All integration tests extend the BaseIntegrationTest to reuse a common setup
-  and functionality
-- **Test isolation**: Clear database content before each test for isolation
-- **API usage for integration tests**: When possible, test the application as a black box using the APIs (e.g., verify
-  registration by logging in with those credentials, not by checking the database)
-- **DTOs as REST input**: Send the body as the DTO object instead of a Map or JSON string
+See the [`backend-testing` skill](.claude/skills/backend-testing/SKILL.md) for the full testing guide — principles,
+layout, REST Assured / Mockito / TestContainers patterns, the `BaseIntegrationTest` helper inventory, edge-case
+templates, and common pitfalls. Load this skill automatically when working on tests.

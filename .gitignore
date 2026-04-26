@@ -18,7 +18,7 @@ target/
 .idea
 .junie
 .github
-.claude
+.claude/agent-memory
 *.iws
 *.iml
 *.ipr

@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn test:*)",
+      "Bash(mvn clean:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "Bash(mvn verify:*)"
+    ],
+    "deny": [
+      "Bash(git push *)"
+    ],
+    "ask": []
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "F=$(jq -r .tool_input.file_path); [[ $F == *.java ]] && mvn -f \"$CLAUDE_PROJECT_DIR/pom.xml\" -q formatter:format impsort:sort \"-Dformatter.includes=**/${F##*/}\" \"-Dimpsort.includes=**/${F##*/}\"",
+            "statusMessage": "Reformatting Java file"
+          }
+        ]
+      }
+    ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true
+  }
+}
