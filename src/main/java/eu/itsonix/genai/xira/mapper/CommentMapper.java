@@ -13,8 +13,7 @@ public final class CommentMapper {
     }
 
     public static CommentResponse toCommentResponse(final IssueComment comment) {
-        return new CommentResponse()
-                .id(UUID.fromString(comment.getId()))
+        return new CommentResponse().id(UUID.fromString(comment.getId()))
                 .author(UserMapper.toUserResponse(comment.getAuthor()))
                 .content(comment.getContent())
                 .createdAt(OffsetDateTime.ofInstant(comment.getCreatedAt(), ZoneOffset.UTC))

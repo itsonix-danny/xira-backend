@@ -11,8 +11,7 @@ public final class UserMapper {
     }
 
     public static UserResponse toUserResponse(final XiraUser user) {
-        return new UserResponse()
-                .id(UUID.fromString(user.getId()))
+        return new UserResponse().id(UUID.fromString(user.getId()))
                 .email(user.getEmail())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName());

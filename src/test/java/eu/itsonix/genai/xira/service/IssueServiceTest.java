@@ -962,8 +962,8 @@ class IssueServiceTest {
                 .createdAt(createdAt)
                 .closedAt(null)
                 .issueAssignees(Set.of())
-                .sprintIssues(Set.of(SprintIssue.builder().sprintId("sprint-id").issueId("issue-id").sprint(sprint)
-                        .build()))
+                .sprintIssues(
+                        Set.of(SprintIssue.builder().sprintId("sprint-id").issueId("issue-id").sprint(sprint).build()))
                 .build();
 
         when(issueRepository.findWithDetailsByKeyAndProjectKeyIgnoreCase(issueKey, projectKey))
@@ -1060,15 +1060,17 @@ class IssueServiceTest {
                 .reporter(reporter)
                 .createdAt(createdAt)
                 .closedAt(null)
-                .issueAssignees(Set.of(IssueAssignee.builder()
-                        .issueId("issue-id")
-                        .userId("550e8400-e29b-41d4-a716-446655440004")
-                        .xiraUser(assignee1)
-                        .build(), IssueAssignee.builder()
-                        .issueId("issue-id")
-                        .userId("550e8400-e29b-41d4-a716-446655440005")
-                        .xiraUser(assignee2)
-                        .build()))
+                .issueAssignees(Set.of(
+                        IssueAssignee.builder()
+                                .issueId("issue-id")
+                                .userId("550e8400-e29b-41d4-a716-446655440004")
+                                .xiraUser(assignee1)
+                                .build(),
+                        IssueAssignee.builder()
+                                .issueId("issue-id")
+                                .userId("550e8400-e29b-41d4-a716-446655440005")
+                                .xiraUser(assignee2)
+                                .build()))
                 .sprintIssues(Set.of())
                 .build();
 

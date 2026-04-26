@@ -17,12 +17,10 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = {"boardColumns"})
+@ToString(exclude = { "boardColumns" })
 @Builder
 @Entity
-@Table(uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"project_id", "board_number"})
-})
+@Table(uniqueConstraints = { @UniqueConstraint(columnNames = { "project_id", "board_number" }) })
 @EntityListeners(AuditingEntityListener.class)
 public class Board {
 

@@ -25,7 +25,8 @@ public final class BoardMapper {
             final Map<BoardColumn, List<Issue>> issuesByColumn) {
         return new KanbanBoardDetailsResponse().name(board.getName())
                 .type(KanbanBoardDetailsResponse.TypeEnum.KANBAN)
-                .columns(issuesByColumn.entrySet().stream()
+                .columns(issuesByColumn.entrySet()
+                        .stream()
                         .map(entry -> toBoardColumnResponse(entry.getKey(), entry.getValue()))
                         .toList());
     }

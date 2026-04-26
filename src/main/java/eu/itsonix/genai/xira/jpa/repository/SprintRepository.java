@@ -17,11 +17,11 @@ public interface SprintRepository extends JpaRepository<Sprint, String> {
 
     boolean existsByProjectIdAndStateAndIdNot(final String projectId, final SprintState state, final String id);
 
-    @EntityGraph(attributePaths = {"sprintIssues", "sprintIssues.issue", "sprintIssues.issue.status",
-            "sprintIssues.issue.issueAssignees", "sprintIssues.issue.issueAssignees.xiraUser"})
+    @EntityGraph(attributePaths = { "sprintIssues", "sprintIssues.issue", "sprintIssues.issue.status",
+            "sprintIssues.issue.issueAssignees", "sprintIssues.issue.issueAssignees.xiraUser" })
     Optional<Sprint> findByProjectIdAndState(final String projectId, final SprintState state);
 
-    @EntityGraph(attributePaths = {"sprintIssues", "sprintIssues.issue", "sprintIssues.issue.status",
-            "sprintIssues.issue.issueAssignees", "sprintIssues.issue.issueAssignees.xiraUser"})
+    @EntityGraph(attributePaths = { "sprintIssues", "sprintIssues.issue", "sprintIssues.issue.status",
+            "sprintIssues.issue.issueAssignees", "sprintIssues.issue.issueAssignees.xiraUser" })
     List<Sprint> findByProjectIdAndStateOrderByCreatedAt(final String projectId, final SprintState state);
 }

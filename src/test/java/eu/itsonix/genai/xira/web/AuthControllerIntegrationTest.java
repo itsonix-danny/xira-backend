@@ -114,7 +114,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .firstName("John")
                 .lastName("Doe");
 
-        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+        given().contentType(ContentType.JSON)
+                .body(registerRequest)
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(400);
     }
 
     @Test
@@ -124,7 +129,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .firstName("John")
                 .lastName("Doe");
 
-        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+        given().contentType(ContentType.JSON)
+                .body(registerRequest)
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(400);
     }
 
     @Test
@@ -134,7 +144,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .firstName("")
                 .lastName("Doe");
 
-        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+        given().contentType(ContentType.JSON)
+                .body(registerRequest)
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(400);
     }
 
     @Test
@@ -144,7 +159,12 @@ class AuthControllerIntegrationTest extends BaseIntegrationTest {
                 .firstName("John")
                 .lastName("");
 
-        given().contentType(ContentType.JSON).body(registerRequest).when().post("/auth/register").then().statusCode(400);
+        given().contentType(ContentType.JSON)
+                .body(registerRequest)
+                .when()
+                .post("/auth/register")
+                .then()
+                .statusCode(400);
     }
 
     @Test

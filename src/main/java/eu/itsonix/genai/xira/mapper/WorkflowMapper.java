@@ -1,9 +1,9 @@
 package eu.itsonix.genai.xira.mapper;
 
+import java.util.UUID;
+
 import eu.itsonix.genai.xira.jpa.entity.WorkflowStatus;
 import eu.itsonix.genai.xira.web.model.WorkflowStatusResponse;
-
-import java.util.UUID;
 
 public final class WorkflowMapper {
 

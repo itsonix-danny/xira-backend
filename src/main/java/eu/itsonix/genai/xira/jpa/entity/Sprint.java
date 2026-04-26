@@ -17,7 +17,7 @@ import lombok.*;
 @NoArgsConstructor
 @Getter
 @Setter
-@ToString(exclude = {"sprintIssues"})
+@ToString(exclude = { "sprintIssues" })
 @Builder
 @Entity
 @EntityListeners(AuditingEntityListener.class)

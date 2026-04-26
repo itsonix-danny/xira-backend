@@ -496,10 +496,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .get("/projects/XIRA/boards/1")
-                .then()
-                .statusCode(401);
+        given().when().get("/projects/XIRA/boards/1").then().statusCode(401);
     }
 
     @Test
@@ -572,10 +569,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .get("/projects/XIRA/boards/1/active-sprint")
-                .then()
-                .statusCode(401);
+        given().when().get("/projects/XIRA/boards/1/active-sprint").then().statusCode(401);
     }
 
     @Test
@@ -728,10 +722,7 @@ class BoardControllerIntegrationTest extends BaseIntegrationTest {
                 .then()
                 .statusCode(201);
 
-        given().when()
-                .delete("/projects/XIRA/boards/1")
-                .then()
-                .statusCode(401);
+        given().when().delete("/projects/XIRA/boards/1").then().statusCode(401);
     }
 
     @Test

@@ -23,8 +23,8 @@ public class IssueController implements IssuesApi {
     @Override
     public ResponseEntity<List<IssueSummaryResponse>> getIssues(final String projectKey, final UUID assigneeId,
             final Boolean includeFinished, final String search) {
-        return ResponseEntity.ok(issueService.getIssues(projectKey,
-                assigneeId != null ? assigneeId.toString() : null, includeFinished, search));
+        return ResponseEntity.ok(issueService.getIssues(projectKey, assigneeId != null ? assigneeId.toString() : null,
+                includeFinished, search));
     }
 
     @Override

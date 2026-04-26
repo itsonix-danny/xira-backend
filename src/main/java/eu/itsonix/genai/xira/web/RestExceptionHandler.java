@@ -29,7 +29,7 @@ public class RestExceptionHandler {
         return problemResponse(UNAUTHORIZED, ex);
     }
 
-    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
+    @ExceptionHandler({ BadCredentialsException.class, AuthenticationException.class })
     public ResponseEntity<Problem> handleAuthenticationException(final Exception ex) {
         return problemResponse(UNAUTHORIZED, ex);
     }

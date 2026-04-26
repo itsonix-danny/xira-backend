@@ -43,7 +43,7 @@ public class Project {
     @Column(name = "lead_user_id", insertable = false, updatable = false)
     private String ownerId;
 
-    @OneToOne(mappedBy = "project", cascade = {CascadeType.PERSIST, CascadeType.REMOVE})
+    @OneToOne(mappedBy = "project", cascade = { CascadeType.PERSIST, CascadeType.REMOVE })
     private Workflow workflow;
 
     @OneToMany(mappedBy = "project")
