@@ -16,11 +16,11 @@
     <properties>
         <java.version>25</java.version>
         <testcontainers.version>1.21.4</testcontainers.version>
-        <net.revelc.code.formatter.formatter-maven-plugin.version>2.29.0</net.revelc.code.formatter.formatter-maven-plugin.version>
-        <net.revelc.code.impsort-maven-plugin.version>1.13.0</net.revelc.code.impsort-maven-plugin.version>
         <sonar.projectKey>xira-backend</sonar.projectKey>
         <sonar.projectName>xira-backend</sonar.projectName>
         <sonar.host.url>https://sonar.stage.itsinternal.de</sonar.host.url>
+        <net.revelc.code.formatter.formatter-maven-plugin.version>2.29.0</net.revelc.code.formatter.formatter-maven-plugin.version>
+        <net.revelc.code.impsort-maven-plugin.version>1.13.0</net.revelc.code.impsort-maven-plugin.version>
     </properties>
     <dependencies>
         <dependency>
