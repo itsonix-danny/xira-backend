@@ -2,16 +2,29 @@
 
 A Jira-like issue tracker and project management system built with Spring Boot 3.5.5 and Java 25.
 
-## Quick Start
+## Prerequisites
+
+- Java 25
+- Maven 3.9+
+- Docker
+
+## First Time Setup
 
 ```bash
-# Start PostgreSQL database
-docker-compose up -d
+# 1. Copy `.env.example` to `.env` and adjust the values if needed:
+cp .env.example .env
+  
+# 2. Start the PostgreSQL database:
+docker compose up -d
 
-# Build and run tests
+# 3. Build the project and run all tests:
 mvn clean install
+```
 
-# Run the application
+## Running the Application
+
+```bash
+docker compose up -d
 mvn spring-boot:run
 ```
 
@@ -21,11 +34,17 @@ mvn spring-boot:run
 # Build without tests
 mvn clean install -DskipTests
 
-# Run specific test
+# Run unit tests only
+mvn test
+
+# Run all tests including integration tests
+mvn verify
+
+# Run a specific test
 mvn test -Dtest=AuthServiceTest
 
 # Stop database
-docker-compose down
+docker compose down
 ```
 
 ## Tech Stack

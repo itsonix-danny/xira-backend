@@ -1,13 +1,11 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15-alpine
     container_name: xira-db
     environment:
-      POSTGRES_USER: xira
-      POSTGRES_PASSWORD: xira
-      POSTGRES_DB: xira
+      POSTGRES_USER: ${POSTGRES_USER:-xira}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-xira}
+      POSTGRES_DB: ${POSTGRES_DB:-xira}
     ports:
       - "5432:5432"
     volumes:
